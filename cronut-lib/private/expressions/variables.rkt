@@ -106,6 +106,29 @@
 ;     the "get" and "replace" approach.)
 
 
+; TODO: We depend on some things in this module that we should define
+; at some point:
+;
+; define-constructor, field
+; specialize, method
+; invoke
+;
+; cronut-any/c
+; instance/c
+;
+; cronut-set-from-list
+; cronut-set-add
+; cronut-set-union
+; cronut-set-union-list
+; cronut-set-minus
+; cronut-dict-ref
+; cronut-dict-set
+;
+; expr, map-recursive-occurrences, get-free-vars
+; expr-substitutable, substitute
+; expr-interpretable-as-racket, interpret
+
+
 #|
 
 (define-constructor (expr-var (field name cronut-any/c)))
