@@ -124,6 +124,7 @@
 ; cronut-dict-ref
 ; cronut-dict-set
 ;
+; (NOTE: These are defined in `cronut/private/expressions`.)
 ; expr, map-recursive-occurrences, get-free-vars
 ; expr-substitutable, substitute
 ; expr-interpretable-as-racket, interpret
