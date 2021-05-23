@@ -20,4 +20,17 @@
 ;   language governing permissions and limitations under the License.
 
 
-; TODO: Export something here.
+(require (for-syntax (only-in syntax/parse expr)))
+
+(require (only-in syntax/parse/define define-syntax-parse-rule))
+
+
+; TODO: Implement `define-cronut-module-here` in a way that isn't just
+; a placeholder, and write documentation for it.
+(provide define-cronut-module-here)
+
+
+(define-syntax-parse-rule (define-cronut-module-here decl:expr ...)
+  (begin
+    (define hello (begin (#%datum . decl) ...))
+    (provide hello)))

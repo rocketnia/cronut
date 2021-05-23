@@ -1,8 +1,11 @@
 #lang racket/base
 
-; cronut/tests
+; cronut/private/racket-default-reader-module-language.rkt
 ;
-; Unit tests.
+; The expansion-time module language corresponding to the language
+; `#lang cronut/racket-default-reader`, which defines a Cronut module
+; in a way that reuses Racket's reader rather than performing its own
+; text processing.
 
 ;   Copyright 2021 The Cronut Authors
 ;
@@ -19,17 +22,15 @@
 ;   language governing permissions and limitations under the License.
 
 
-(require rackunit)
+(require (for-syntax (only-in syntax/parse expr)))
 
-(require cronut)
+(require (only-in syntax/parse/define define-syntax-parse-rule))
 
-(require
-  (only-in cronut/tests/sample-module-for-cronut-racket-default-reader
-    hello))
-
-; (We provide nothing from this module.)
+(require (only-in cronut define-cronut-module-here))
 
 
-; TODO: Write more unit tests.
+(provide (rename-out [-#%module-begin #%module-begin]))
 
-(check-equal? hello 75)
+
+(define-syntax-parse-rule (-#%module-begin decl:expr ...)
+  (#%module-begin (define-cronut-module-here decl ...)))
