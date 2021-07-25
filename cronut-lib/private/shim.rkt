@@ -42,9 +42,12 @@
           rename-contract)
         (only-in #,(break 'racket/contract/combinator)
           coerce-contract)
-        (only-in #,(break 'racket/set) set/c)
+        (only-in #,(break 'racket/set) set set/c)
+        (only-in #,(break 'syntax/parse) expr)
+        (only-in #,(break 'syntax/parse/define)
+          define-syntax-parse-rule)
         
-        (only-in #,(break 'lathe-comforts) w-)
+        (only-in #,(break 'lathe-comforts) dissect w-)
         (only-in #,(break 'lathe-comforts/struct)
           auto-equal auto-write define-imitation-simple-generics
           define-imitation-simple-struct)

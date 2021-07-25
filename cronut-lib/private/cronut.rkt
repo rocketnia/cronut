@@ -24,10 +24,126 @@
 
 (shim-require-various)
 
-; TODO: Export something from this module. We're putting various
-; implementation details in this file that we'll probably want to
-; organize into other files someday, but right now even the
-; implementation details aren't being used.
+
+(provide
+  
+  
+  ; Internal representation of Cronut values, patterns, and abstract
+  ; interpretation values
+  
+  name?
+  name-impl?
+  prop:name
+  make-name-impl
+  
+  other-name?
+  other-name-value
+  other-name
+  
+  string-name?
+  string-name-value
+  string-name
+  
+  coined-name?
+  coined-name-module-spine
+  coined-name-name
+  coined-name
+  
+  construction-name?
+  construction-name-op-call
+  construction-name
+  
+  name/c
+  
+  module-spine?
+  module-spine-impl?
+  prop:module-spine
+  make-module-spine-impl
+  
+  main-module-spine?
+  main-module-spine-collection
+  main-module-spine-op-call
+  main-module-spine
+  
+  submodule-spine?
+  submodule-spine-parent
+  submodule-spine-op-call
+  submodule-spine
+  
+  module-spine/c
+  
+  module-collection?
+  module-collection-impl?
+  prop:module-collection
+  make-module-collection-impl
+  
+  nil-module-collection?
+  nil-module-collection
+  
+  snoc-module-collection?
+  snoc-module-collection-parent
+  snoc-module-collection-op-call
+  snoc-module-collection
+  
+  module-collection/c
+  
+  op-call?
+  op-call-op
+  op-call-args
+  op-call
+  
+  op-call/c
+  
+  
+  ; Internal representation of Racket modules for Cronut lexical units
+  
+  module-contents-for-lexical-unit?
+  module-contents-for-lexical-unit-declared-racket-module-path
+  module-contents-for-lexical-unit-bundle
+  module-contents-for-lexical-unit
+  
+  module-contents-for-lexical-unit/c
+  
+  module-bundle?
+  module-bundle-impl?
+  prop:module-bundle
+  make-module-bundle-impl
+  
+  elsewhere-bundle?
+  elsewhere-bundle-racket-module-path
+  elsewhere-bundle-uncompiled-syntax-object
+  elsewhere-bundle
+  
+  here-bundle?
+  here-bundle-uncompiled-modules
+  here-bundle-compiled-modules
+  here-bundle
+  
+  module-bundle/c
+  
+  declared-lexical-unit?
+  declared-lexical-unit-formal-optional-arguments
+  declared-lexical-unit-body
+  declared-lexical-unit
+  
+  declared-lexical-unit/c
+  
+  compiled-lexical-unit-entry-for-single-argument-function?
+  compiled-lexical-unit-entry-for-single-argument-function-arg
+  compiled-lexical-unit-entry-for-single-argument-function-body-template
+  compiled-lexical-unit-entry-for-single-argument-function
+  
+  compiled-lexical-unit-entry-for-single-argument-function/c
+  compiled-lexical-unit?
+  compiled-lexical-unit-functions
+  compiled-lexical-unit
+  
+  compiled-lexical-unit/c
+  
+  )
+
+; TODO: Consider organizing the various implementation details in this
+; file into other files someday.
 
 
 
