@@ -38,10 +38,11 @@
     #`(require
         
         (only-in #,(break 'racket/contract/base)
-          -> and/c any/c contract-name hash/c none/c or/c
+          -> and/c any/c contract-name hash/c listof none/c or/c
           rename-contract)
         (only-in #,(break 'racket/contract/combinator)
           coerce-contract)
+        (only-in #,(break 'racket/set) set/c)
         
         (only-in #,(break 'lathe-comforts) w-)
         (only-in #,(break 'lathe-comforts/struct)

@@ -31,6 +31,15 @@
 
 
 
+; ===== Miscellaneous ================================================
+;
+; TODO: See if these should be added to Lathe Comforts or something.
+
+(define (interned-symbol? v)
+  (and (symbol? v) (symbol-interned? v)))
+
+
+
 ; ====================================================================
 ; Internal representation of Cronut values, patterns, and abstract
 ; interpretation values
@@ -267,25 +276,81 @@
     `(module-bundle/c)))
 
 
+(define-imitation-simple-struct
+  
+  (declared-lexical-unit?
+    
+    ; A set of the module/collection's optional arguments.
+    declared-lexical-unit-formal-optional-arguments
+    
+    ; A bunch of syntax objects that are ready to be compiled once
+    ; those arguments are supplied.
+    declared-lexical-unit-body)
+  
+  declared-lexical-unit
+  'declared-lexical-unit (current-inspector)
+  (auto-write)
+  (auto-equal))
+
 (define (declared-lexical-unit/c)
   (rename-contract
-    ; TODO: Make this something more specific. Let's see.... We should
-    ; have a list of the module/collection's optional arguments and a
-    ; bunch of syntax objects that are ready to be compiled once those
-    ; arguments are supplied.
-    any/c
+    (match/c declared-lexical-unit (set/c keyword?) (listof syntax?))
     `(declared-lexical-unit/c)))
+
+
+(define-imitation-simple-struct
+  (compiled-lexical-unit-entry-for-single-argument-function?
+    compiled-lexical-unit-entry-for-single-argument-function-arg
+    compiled-lexical-unit-entry-for-single-argument-function-body-template)
+  compiled-lexical-unit-entry-for-single-argument-function
+  'compiled-lexical-unit-entry-for-single-argument-function
+  (current-inspector)
+  (auto-write)
+  (auto-equal))
+
+(define (compiled-lexical-unit-entry-for-single-argument-function/c)
+  (rename-contract
+    (match/c compiled-lexical-unit-entry-for-single-argument-function
+      identifier?
+      
+      ; NOTE: The body template should be an expression, and its only
+      ; free variable should be the argument identifier. If the value
+      ; of the argument variable is a syntax object representing an
+      ; expression with any number of free variables, then the result
+      ; of the body template should be a syntax object representing an
+      ; expression with the same free variables that calls the
+      ; function with that argument expression.
+      syntax?)
+    `(compiled-lexical-unit-entry-for-single-argument-function/c)))
+
+
+; TODO: Flesh this out with more kinds of compiled module information.
+; Let's see.... We should have a set of submodules/resident lexical
+; units; a set of coined names; a set of defined constructors; a set
+; of defined interfaces; some kind of information about specialization
+; matrices; a set of defined compile-time values; and some kind of
+; information about imports and exports. For each specialization or
+; other quinable expression, we should also have that expression's
+; compilation to Racket. Currently we have single-argument functions
+; and make no effort to make them quinable, but eventually they should
+; be expressible in terms of constructors that implement a function
+; interface.
+;
+(define-imitation-simple-struct
+  
+  (compiled-lexical-unit?
+    
+    ; A map of the defined single-argument functions.
+    compiled-lexical-unit-functions)
+  
+  compiled-lexical-unit
+  'compiled-lexical-unit (current-inspector)
+  (auto-write)
+  (auto-equal))
 
 (define (compiled-lexical-unit/c)
   (rename-contract
-    ; TODO: Make this something more specific. Let's see.... We should
-    ; have a list of the default values of the module/collection's
-    ; optional arguments; a list of submodules/resident lexical units;
-    ; a list of coined names; a list of defined constructors; a list
-    ; of defined interfaces; some kind of information about
-    ; specialization matrices; a list of defined compile-time values;
-    ; and some kind of information about imports and exports. For each
-    ; specialization or other quinable expression, we should also have
-    ; that expression's compilation to Racket.
-    any/c
+    (match/c compiled-lexical-unit
+      (hash/c interned-symbol?
+        (compiled-lexical-unit-entry-for-single-argument-function/c)))
     `(compiled-lexical-unit/c)))
