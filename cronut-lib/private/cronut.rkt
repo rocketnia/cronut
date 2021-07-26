@@ -130,6 +130,11 @@
   
   op-call/c
   
+  make-module-spine
+  simplify-module-spine
+;  simplify-module-collection
+;  simplify-op-call
+  
   
   ; Internal representation of Racket modules for Cronut lexical units
   
@@ -430,6 +435,38 @@
       (name/c other-name-value/c)
       (hash/c (name/c none/c) (name/c other-name-value/c)))
     `(module-collection/c ,(contract-name other-name-value/c))))
+
+
+(define (make-module-spine . symbols)
+  (dissect symbols (list collection-parts ... module)
+  #/main-module-spine
+    (list-foldl (nil-module-collection) collection-parts
+      (fn collection part
+        (snoc-module-collection collection
+          (op-call (string-name part) #/hash))))
+    (op-call (string-name module) #/hash)))
+
+(define (simplify-module-spine spine)
+  (mat spine (main-module-spine collection call)
+    (maybe-bind (simplify-module-collection collection)
+    #/fn collection
+    #/maybe-bind (simplify-op-call call) #/fn part
+    #/just #/main-simplified-module-spine collection part)
+  #/dissect spine (submodule-spine parent call)
+    (simplify-module-spine parent)))
+
+(define (simplify-module-collection collection)
+  (mat collection (nil-module-collection)
+    (just #/nil-simplified-module-collection)
+  #/dissect collection (snoc-module-collection parent call)
+    (maybe-bind (simplify-module-collection parent) #/fn parent
+    #/maybe-bind (simplify-op-call call) #/fn part
+    #/just #/snoc-simplified-module-collection parent part)))
+
+(define (simplify-op-call call)
+  (dissect call (op-call op args)
+  #/expect op (string-name op) (nothing)
+  #/maybe-if (simplified-module-spine-part? op) #/fn op))
 
 
 

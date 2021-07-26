@@ -45,15 +45,6 @@
 ; (We provide nothing from this module.)
 
 
-(define-for-syntax (make-module-spine . symbols)
-  (dissect symbols (list collection-parts ... module)
-  #/main-module-spine
-    (list-foldl (nil-module-collection) collection-parts
-      (fn collection part
-        (snoc-module-collection collection
-          (op-call (string-name part) #/hash))))
-    (op-call (string-name module) #/hash)))
-
 (define-for-syntax entry-for-add-two
   (dissect definer
     (module-contents-for-lexical-unit _

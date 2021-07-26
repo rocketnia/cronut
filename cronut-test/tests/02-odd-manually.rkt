@@ -42,19 +42,12 @@
   (provide #/for-syntax lexical-unit-compile-time)
   
   
-  (define-for-syntax (make-simplified-module-spine . symbols)
-    (dissect symbols (list collection-parts ... module)
-    #/main-simplified-module-spine
-      (list-foldl (nil-simplified-module-collection) collection-parts
-        (fn collection part
-          (snoc-simplified-module-collection collection part)))
-      module))
-  
   (define-for-syntax lexical-unit-compile-time
     (module-contents-for-lexical-unit
-      (make-simplified-module-spine 'cronut 'tests '02-odd-manually)
+      (just-value #/simplify-module-spine #/make-module-spine
+        'cronut 'tests '02-odd-manually)
       (elsewhere-bundle
-        (make-simplified-module-spine
+        (just-value #/simplify-module-spine #/make-module-spine
           'cronut 'tests '02-even-manually)
         ; TODO: Add syntax objects to this empty list so that this
         ; declared lexical unit compiles to the compiled version in

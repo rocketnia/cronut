@@ -40,30 +40,13 @@
   (provide #/for-syntax lexical-unit-compile-time)
   
   
-  (define-for-syntax (make-simplified-module-spine . symbols)
-    (dissect symbols (list collection-parts ... module)
-    #/main-simplified-module-spine
-      (list-foldl (nil-simplified-module-collection) collection-parts
-        (fn collection part
-          (snoc-simplified-module-collection collection part)))
-      module))
-  
-  (define-for-syntax (make-module-spine . symbols)
-    (dissect symbols (list collection-parts ... module)
-    #/main-module-spine
-      (list-foldl (nil-module-collection) collection-parts
-        (fn collection part
-          (snoc-module-collection collection
-            (op-call (string-name part) #/hash))))
-      (op-call (string-name module) #/hash)))
-  
   (define-for-syntax lexical-unit-compile-time
     (module-contents-for-lexical-unit
-      (make-simplified-module-spine
+      (just-value #/simplify-module-spine #/make-module-spine
         'cronut 'tests '01-define-function-manually)
       (here-bundle
         (hash
-          (make-simplified-module-spine
+          (just-value #/simplify-module-spine #/make-module-spine
             'cronut 'tests '01-define-function-manually)
           (declared-lexical-unit (set)
             ; TODO: Add syntax objects to this list so that this

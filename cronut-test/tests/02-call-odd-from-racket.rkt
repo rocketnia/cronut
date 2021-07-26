@@ -47,15 +47,6 @@
 ; (We provide nothing from this module.)
 
 
-(define-for-syntax (make-module-spine . symbols)
-  (dissect symbols (list collection-parts ... module)
-  #/main-module-spine
-    (list-foldl (nil-module-collection) collection-parts
-      (fn collection part
-        (snoc-module-collection collection
-          (op-call (string-name part) #/hash))))
-    (op-call (string-name module) #/hash)))
-
 (define-syntax-parse-rule (require-definer-host definer-host:id)
   
   #:with host
