@@ -40,6 +40,14 @@
   (provide #/for-syntax lexical-unit-compile-time)
   
   
+  (define-for-syntax (make-simplified-module-spine . symbols)
+    (dissect symbols (list collection-parts ... module)
+    #/main-simplified-module-spine
+      (list-foldl (nil-simplified-module-collection) collection-parts
+        (fn collection part
+          (snoc-simplified-module-collection collection part)))
+      module))
+  
   (define-for-syntax (make-module-spine . symbols)
     (dissect symbols (list collection-parts ... module)
     #/main-module-spine
@@ -51,9 +59,12 @@
   
   (define-for-syntax lexical-unit-compile-time
     (module-contents-for-lexical-unit
-      'cronut/tests/01-define-function-manually
+      (make-simplified-module-spine
+        'cronut 'tests '01-define-function-manually)
       (here-bundle
-        (hash 'cronut/tests/01-define-function-manually
+        (hash
+          (make-simplified-module-spine
+            'cronut 'tests '01-define-function-manually)
           (declared-lexical-unit (set)
             ; TODO: Add syntax objects to this list so that this
             ; declared lexical unit compiles to the compiled version

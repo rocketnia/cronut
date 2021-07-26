@@ -61,7 +61,7 @@
   #:with host
   (dissect definer
     (module-contents-for-lexical-unit _ (elsewhere-bundle host _))
-    host)
+  #/simplified-module-spine->racket-module-path host)
   
   (require #/only-in
     (submod host :%private/generated:cronut:lexical-unit)

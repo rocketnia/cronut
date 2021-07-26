@@ -28,13 +28,18 @@
 (provide
   
   
+  ; Miscellaneous
+  
+;  interned-symbol?
+  
+  
   ; Internal representation of Cronut values, patterns, and abstract
   ; interpretation values
   
   name?
-  name-impl?
-  prop:name
-  make-name-impl
+;  name-impl?
+;  prop:name
+;  make-name-impl
   
   other-name?
   other-name-value
@@ -55,10 +60,41 @@
   
   name/c
   
+  simplified-module-spine-part?
+  
+  simplified-module-spine?
+;  simplified-module-spine-impl?
+;  prop:simplified-module-spine
+;  make-simplified-module-spine-impl
+  
+  main-simplified-module-spine?
+  main-simplified-module-spine-collection
+  main-simplified-module-spine-spine-part
+  main-simplified-module-spine
+  
+  simplified-module-spine/c
+  
+  simplified-module-spine->racket-module-path
+  
+  simplified-module-collection?
+;  simplified-module-collection-impl?
+;  prop:simplified-module-collection
+;  make-simplified-module-collection-impl
+  
+  nil-simplified-module-collection?
+  nil-simplified-module-collection
+  
+  snoc-simplified-module-collection?
+  snoc-simplified-module-collection-parent
+  snoc-simplified-module-collection-spine-part
+  snoc-simplified-module-collection
+  
+  simplified-module-collection/c
+  
   module-spine?
-  module-spine-impl?
-  prop:module-spine
-  make-module-spine-impl
+;  module-spine-impl?
+;  prop:module-spine
+;  make-module-spine-impl
   
   main-module-spine?
   main-module-spine-collection
@@ -73,9 +109,9 @@
   module-spine/c
   
   module-collection?
-  module-collection-impl?
-  prop:module-collection
-  make-module-collection-impl
+;  module-collection-impl?
+;  prop:module-collection
+;  make-module-collection-impl
   
   nil-module-collection?
   nil-module-collection
@@ -98,19 +134,19 @@
   ; Internal representation of Racket modules for Cronut lexical units
   
   module-contents-for-lexical-unit?
-  module-contents-for-lexical-unit-declared-racket-module-path
+  module-contents-for-lexical-unit-declared-simplified-module-spine
   module-contents-for-lexical-unit-bundle
   module-contents-for-lexical-unit
   
   module-contents-for-lexical-unit/c
   
   module-bundle?
-  module-bundle-impl?
-  prop:module-bundle
-  make-module-bundle-impl
+;  module-bundle-impl?
+;  prop:module-bundle
+;  make-module-bundle-impl
   
   elsewhere-bundle?
-  elsewhere-bundle-racket-module-path
+  elsewhere-bundle-simplified-module-spine
   elsewhere-bundle-declared-lexical-unit
   elsewhere-bundle
   
@@ -218,6 +254,97 @@
     `(name/c ,(contract-name other-name-value/c))))
 
 
+(define (simplified-module-spine-part? v)
+  ; TODO: Disallow symbols that contain slashes or dots or which have
+  ; names that collide with commonly reserved filenames.
+  (interned-symbol? v))
+
+
+(define-imitation-simple-generics
+  simplified-module-spine?
+  simplified-module-spine-impl?
+  prop:simplified-module-spine
+  make-simplified-module-spine-impl
+  'simplified-module-spine 'simplified-module-spine-impl (list))
+
+(define-imitation-simple-struct
+  (main-simplified-module-spine?
+    main-simplified-module-spine-collection
+    main-simplified-module-spine-spine-part)
+  main-simplified-module-spine
+  'main-simplified-module-spine (current-inspector)
+  (auto-write)
+  (auto-equal)
+  (#:prop prop:simplified-module-spine
+    (make-simplified-module-spine-impl)))
+
+(define (simplified-module-spine/c)
+  (rename-contract
+    (and/c simplified-module-spine?
+      (or/c
+        (match/c main-simplified-module-spine
+          (simplified-module-collection/c)
+          simplified-module-spine-part?)))
+    `(simplified-module-spine/c)))
+
+
+(define (simplified-module-spine->racket-module-path s)
+  
+  (define (collection->list collection)
+    (w-loop next collection collection result (list)
+      (mat collection (nil-simplified-module-collection) result
+      #/dissect collection
+        (snoc-simplified-module-collection collection part)
+        (next collection (cons part result)))))
+  
+  (define (spine->list spine)
+    (dissect spine (main-simplified-module-spine collection part)
+    #/append (collection->list collection) (list part)))
+  
+  (string->symbol
+    (string-join (map symbol->string #/spine->list s) "/")))
+
+
+(define-imitation-simple-generics
+  simplified-module-collection?
+  simplified-module-collection-impl?
+  prop:simplified-module-collection
+  make-simplified-module-collection-impl
+  'simplified-module-collection 'simplified-module-collection-impl
+  (list))
+
+(define-imitation-simple-struct
+  (nil-simplified-module-collection?)
+  nil-simplified-module-collection
+  'nil-simplified-module-collection (current-inspector)
+  (auto-write)
+  (auto-equal)
+  (#:prop prop:simplified-module-collection
+    (make-simplified-module-collection-impl)))
+
+(define-imitation-simple-struct
+  (snoc-simplified-module-collection?
+    snoc-simplified-module-collection-parent
+    snoc-simplified-module-collection-spine-part)
+  snoc-simplified-module-collection
+  'snoc-simplified-module-collection (current-inspector)
+  (auto-write)
+  (auto-equal)
+  (#:prop prop:simplified-module-collection
+    (make-simplified-module-collection-impl)))
+
+(define (simplified-module-collection/c)
+  (rename-contract
+    (fix/c fixed-simplified-module-collection/c
+      (and/c simplified-module-collection?
+        (or/c
+          (match/c nil-simplified-module-collection)
+          (match/c snoc-simplified-module-collection
+            fixed-simplified-module-collection/c
+            simplified-module-spine-part?))))
+    `(simplified-module-collection/c)))
+
+
 (define-imitation-simple-generics
   module-spine?
   module-spine-impl?
@@ -313,7 +440,7 @@
 
 (define-imitation-simple-struct
   (module-contents-for-lexical-unit?
-    module-contents-for-lexical-unit-declared-racket-module-path
+    module-contents-for-lexical-unit-declared-simplified-module-spine
     module-contents-for-lexical-unit-bundle)
   module-contents-for-lexical-unit
   'module-contents-for-lexical-unit (current-inspector)
@@ -324,9 +451,9 @@
   (rename-contract
     (match/c module-contents-for-lexical-unit
       ; NOTE: If a Racket module represents a Cronut lexical unit
-      ; using `module-contents-for-lexical-unit`, the given Racket
-      ; module path should refer to the same module.
-      module-path?
+      ; using `module-contents-for-lexical-unit`, the given simplified
+      ; module spine should refer to the same module.
+      (simplified-module-spine/c)
       (module-bundle/c))
     `(module-contents-for-lexical-unit/c)))
 
@@ -340,7 +467,7 @@
 
 (define-imitation-simple-struct
   (elsewhere-bundle?
-    elsewhere-bundle-racket-module-path
+    elsewhere-bundle-simplified-module-spine
     elsewhere-bundle-declared-lexical-unit)
   elsewhere-bundle
   'elsewhere-bundle (current-inspector) (auto-write) (auto-equal)
@@ -360,32 +487,34 @@
       (or/c
         
         ; NOTE: If one Racket module represents a Cronut lexical unit
-        ; using `elsewhere-bundle`, the given Racket module path
+        ; using `elsewhere-bundle`, the given simplified module spine
         ; should refer to another Racket module that represents a
         ; Cronut lexical unit using `here-bundle` and that has a
-        ; declared lexical unit whose Racket module path refers back
-        ; to the first Racket module. Conversely, if one Racket module
-        ; represents a Cronut lexical unit using `here-bundle`, one of
-        ; its declared lexical units' Racket module paths should refer
-        ; to the same Racket module, and each of the other declared
-        ; lexical units' Racket module paths should refer to another
-        ; Racket module that represents a Cronut lexical unit using an
-        ; `elsewhere-bundle` where the given Racket module path refers
-        ; back to the first Racket module.
+        ; declared lexical unit whose simplified module spine refers
+        ; back to the first Racket module. Conversely, if one Racket
+        ; module represents a Cronut lexical unit using `here-bundle`,
+        ; one of its declared lexical units' simplified module spines
+        ; should refer to the same Racket module, and each of the
+        ; other declared lexical units' simplified module spines
+        ; should refer to another Racket module that represents a
+        ; Cronut lexical unit using an `elsewhere-bundle` where the
+        ; given simplified module spine refers back to the first
+        ; Racket module.
         
-        ; NOTE: For each Racket module path with a declared lexical
-        ; unit, there should also be a compiled lexical unit for the
-        ; corresponding module spine that passes no arguments anywhere
-        ; along that Racket module path. Conversely, for each compiled
-        ; lexical unit, there should be a declared lexical unit at the
-        ; Racket module path corresponding to that module spine with
-        ; all its arguments stripped away.
+        ; NOTE: For each simplified module spine with a declared
+        ; lexical unit, there should also be a compiled lexical unit
+        ; for the corresponding (non-simplified) module spine that
+        ; passes no arguments anywhere along that simplified module
+        ; spine. Conversely, for each compiled lexical unit, there
+        ; should be a declared lexical unit at the simplified module
+        ; spine corresponding to that module spine.
         
         (match/c elsewhere-bundle
-          module-path?
+          (simplified-module-spine/c)
           (declared-lexical-unit/c))
         (match/c here-bundle
-          (hash/c module-path? (declared-lexical-unit/c))
+          (hash/c (simplified-module-spine/c)
+            (declared-lexical-unit/c))
           (hash/c (module-spine/c none/c)
             ; TODO: What about run-time arguments to the compiled
             ; lexical units? Right now, module spines only seem to

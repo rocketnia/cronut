@@ -43,11 +43,12 @@
         (only-in #,(break 'racket/contract/combinator)
           coerce-contract)
         (only-in #,(break 'racket/set) set set/c)
+        (only-in #,(break 'racket/string) string-join)
         (only-in #,(break 'syntax/parse) expr id)
         (only-in #,(break 'syntax/parse/define)
           define-syntax-parse-rule)
         
-        (only-in #,(break 'lathe-comforts) dissect fn w-)
+        (only-in #,(break 'lathe-comforts) dissect fn mat w- w-loop)
         (only-in #,(break 'lathe-comforts/list) list-foldl)
         (only-in #,(break 'lathe-comforts/struct)
           auto-equal auto-write define-imitation-simple-generics
