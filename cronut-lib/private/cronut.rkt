@@ -111,7 +111,7 @@
   
   elsewhere-bundle?
   elsewhere-bundle-racket-module-path
-  elsewhere-bundle-uncompiled-syntax-object
+  elsewhere-bundle-declared-lexical-unit
   elsewhere-bundle
   
   here-bundle?
@@ -341,7 +341,7 @@
 (define-imitation-simple-struct
   (elsewhere-bundle?
     elsewhere-bundle-racket-module-path
-    elsewhere-bundle-uncompiled-syntax-object)
+    elsewhere-bundle-declared-lexical-unit)
   elsewhere-bundle
   'elsewhere-bundle (current-inspector) (auto-write) (auto-equal)
   (#:prop prop:module-bundle (make-module-bundle-impl)))
@@ -381,7 +381,9 @@
         ; Racket module path corresponding to that module spine with
         ; all its arguments stripped away.
         
-        (match/c elsewhere-bundle module-path? syntax?)
+        (match/c elsewhere-bundle
+          module-path?
+          (declared-lexical-unit/c))
         (match/c here-bundle
           (hash/c module-path? (declared-lexical-unit/c))
           (hash/c (module-spine/c none/c)

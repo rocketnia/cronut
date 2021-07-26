@@ -1,11 +1,13 @@
 #lang parendown racket/base
 
-; cronut/tests/01-define-function-manually
+; cronut/tests/02-even-manually
 ;
-; A unit test which defines a Cronut lexical unit using Racket code
-; which has a function which another Racket module can call.
+; A unit test which defines two mutually recursive Cronut lexical
+; units using Racket code and calls the function from the non-host
+; lexical unit from another Racket module.
 ;
-; This module is the Cronut lexical unit that defines the function.
+; This module is the host Cronut lexical unit. It defines the
+; `is-even?` function.
 
 ;   Copyright 2021 The Cronut Authors
 ;
@@ -51,26 +53,36 @@
   
   (define-for-syntax lexical-unit-compile-time
     (module-contents-for-lexical-unit
-      'cronut/tests/01-define-function-manually
+      'cronut/tests/02-even-manually
       (here-bundle
-        (hash 'cronut/tests/01-define-function-manually
-          (declared-lexical-unit (set)
-            ; TODO: Add syntax objects to this list so that this
-            ; declared lexical unit compiles to the compiled version
-            ; below when it's provided with no arguments. Right now,
-            ; we haven't built the appropriate compiler or any
-            ; suitable syntaxes for it to compile yet.
-            (list)))
+        ; TODO: Add syntax objects to these empty lists so that these
+        ; declared lexical units compile to the compiled versions
+        ; below when they're provided with no arguments. Right now, we
+        ; haven't built the appropriate compiler or any suitable
+        ; syntaxes for it to compile yet.
         (hash
-          (make-module-spine
-            'cronut 'tests '01-define-function-manually)
+          'cronut/tests/02-even-manually
+          (declared-lexical-unit (set) (list))
+          'cronut/tests/02-odd-manually
+          (declared-lexical-unit (set) (list)))
+        (hash
+          (make-module-spine 'cronut 'tests '02-even-manually)
           (compiled-lexical-unit
-            (hash 'add-two
+            (hash 'is-even?
               (compiled-lexical-unit-entry-for-single-argument-function
                 #'x
-                #'#`(0:add-two #,x))))))))
+                #'#`(0:is-even? #,x))))
+          (make-module-spine 'cronut 'tests '02-odd-manually)
+          (compiled-lexical-unit
+            (hash 'is-odd?
+              (compiled-lexical-unit-entry-for-single-argument-function
+                #'x
+                #'#`(1:is-odd? #,x))))))))
   
-  (define (0:add-two x)
-    (+ 2 x))
+  (define (0:is-even? x)
+    (or (zero? x) (1:is-odd? #/sub1 x)))
+  
+  (define (1:is-odd? x)
+    (and (not #/zero? x) (0:is-even? #/sub1 x)))
   
   )
