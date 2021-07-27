@@ -63,6 +63,62 @@
           (+ 2 x)))))
   
   
+  (define-for-syntax add-two-declaration
+    (dissect add-two-declared-lexical-unit
+      (declared-lexical-unit _ #/list declaration-syntax)
+    #/dissect (syntax->datum declaration-syntax)
+      `(declare-using-racket ,get-declaration)
+    #/get-declaration))
+  
+  ; TODO: Resolve the imports automatically, and generate the
+  ; variables automatically as well (as depicted below).
+  (define-for-syntax add-two-imports (list))
+  (define-for-syntax add-two-locals (list #'0:add-two))
+  #;
+  (define-for-syntax add-two-locals
+    (dissect add-two-declaration (cronut-declaration _ _ locals _ _)
+    #/map (make-syntax-introducer) locals))
+  
+  (define-for-syntax add-two-compiled-expr
+    (dissect add-two-declaration
+      (cronut-declaration _ imports locals build-compiled _)
+    #/w- imports
+      (list-map imports #/dissectfn (list import _ _ _) import)
+    #/with-syntax ([(imports ...) imports] [(locals ...) locals])
+    #/apply
+      (syntax-local-eval
+        #`(lambda (imports ... locals ...) #,build-compiled))
+      (append add-two-imports add-two-locals)))
+  
+  (define-for-syntax add-two-run-time-declaration
+    (dissect add-two-declaration
+      (cronut-declaration
+        _ imports locals _ build-run-time-declaration)
+    #/w- imports
+      (list-map imports #/dissectfn (list import _ _ _) import)
+    #/with-syntax ([(imports ...) imports] [(locals ...) locals])
+    #/apply
+      (syntax-local-eval
+        #`
+        (lambda (imports ... locals ...)
+          #,build-run-time-declaration))
+      (append add-two-imports add-two-locals)))
+  
+  (define-syntax-parse-rule
+    (add-two-run-compiled-expr add-two-compiled:id)
+    #:with result (syntax-local-introduce add-two-compiled-expr)
+    (define-for-syntax add-two-compiled result))
+  
+  (add-two-run-compiled-expr add-two-compiled)
+  
+  (define-syntax-parse-rule (add-two-run-run-time-declaration)
+    
+    #:with result
+    (syntax-local-introduce add-two-run-time-declaration)
+    
+    result)
+  
+  
   (define-for-syntax lexical-unit-compile-time
     (module-contents-for-lexical-unit
       (just-value #/simplify-module-spine add-two-definer-spine)
@@ -70,20 +126,8 @@
         (hash
           (just-value #/simplify-module-spine add-two-definer-spine)
           add-two-declared-lexical-unit)
-        ; TODO: Compute these `compiled-lexical-unit?` values by
-        ; compiling the `declared-lexical-unit?` values.
-        (hash
-          add-two-definer-spine
-          (compiled-lexical-unit
-            (hash 'add-two
-              (compiled-lexical-unit-entry-for-single-argument-function
-                #'x
-                #'#`(0:add-two #,x))))))))
+        (hash add-two-definer-spine add-two-compiled))))
   
-  ; TODO: Compute the run-time declarations below by compiling the
-  ; `declared-lexical-unit?` values.
-  
-  (define (0:add-two x)
-    (+ 2 x))
+  (add-two-run-run-time-declaration)
   
   )

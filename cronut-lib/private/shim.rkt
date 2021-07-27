@@ -50,8 +50,8 @@
           define-syntax-parse-rule)
         
         (only-in #,(break 'lathe-comforts)
-          dissect expect fn mat w- w-loop)
-        (only-in #,(break 'lathe-comforts/list) list-foldl)
+          dissect dissectfn expect fn mat w- w-loop)
+        (only-in #,(break 'lathe-comforts/list) list-foldl list-map)
         (only-in #,(break 'lathe-comforts/maybe)
           just just-value maybe-bind maybe-if nothing)
         (only-in #,(break 'lathe-comforts/struct)

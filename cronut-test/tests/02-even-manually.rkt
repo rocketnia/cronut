@@ -91,6 +91,110 @@
       odd-declared-lexical-unit))
   
   
+  (define-for-syntax even-declaration
+    (dissect even-declared-lexical-unit
+      (declared-lexical-unit _ #/list declaration-syntax)
+    #/dissect (syntax->datum declaration-syntax)
+      `(declare-using-racket ,get-declaration)
+    #/get-declaration))
+  
+  ; TODO: Resolve the imports automatically, and generate the
+  ; variables automatically as well.
+  (define-for-syntax even-imports (list #'1:is-odd?))
+  (define-for-syntax even-locals (list #'0:is-even?))
+  
+  (define-for-syntax even-compiled-expr
+    (dissect even-declaration
+      (cronut-declaration _ imports locals build-compiled _)
+    #/w- imports
+      (list-map imports #/dissectfn (list import _ _ _) import)
+    #/with-syntax ([(imports ...) imports] [(locals ...) locals])
+    #/apply
+      (syntax-local-eval
+        #`(lambda (imports ... locals ...) #,build-compiled))
+      (append even-imports even-locals)))
+  
+  (define-for-syntax even-run-time-declaration
+    (dissect even-declaration
+      (cronut-declaration
+        _ imports locals _ build-run-time-declaration)
+    #/w- imports
+      (list-map imports #/dissectfn (list import _ _ _) import)
+    #/with-syntax ([(imports ...) imports] [(locals ...) locals])
+    #/apply
+      (syntax-local-eval
+        #`
+        (lambda (imports ... locals ...)
+          #,build-run-time-declaration))
+      (append even-imports even-locals)))
+  
+  (define-syntax-parse-rule
+    (even-run-compiled-expr even-compiled:id)
+    #:with result (syntax-local-introduce even-compiled-expr)
+    (define-for-syntax even-compiled result))
+  
+  (even-run-compiled-expr even-compiled)
+  
+  (define-syntax-parse-rule (even-run-run-time-declaration)
+    
+    #:with result
+    (syntax-local-introduce even-run-time-declaration)
+    
+    result)
+  
+  
+  (define-for-syntax odd-declaration
+    (dissect odd-declared-lexical-unit
+      (declared-lexical-unit _ #/list declaration-syntax)
+    #/dissect (syntax->datum declaration-syntax)
+      `(declare-using-racket ,get-declaration)
+    #/get-declaration))
+  
+  ; TODO: Resolve the imports automatically, and generate the
+  ; variables automatically as well.
+  (define-for-syntax odd-imports (list #'0:is-even?))
+  (define-for-syntax odd-locals (list #'1:is-odd?))
+  
+  (define-for-syntax odd-compiled-expr
+    (dissect odd-declaration
+      (cronut-declaration _ imports locals build-compiled _)
+    #/w- imports
+      (list-map imports #/dissectfn (list import _ _ _) import)
+    #/with-syntax ([(imports ...) imports] [(locals ...) locals])
+    #/apply
+      (syntax-local-eval
+        #`(lambda (imports ... locals ...) #,build-compiled))
+      (append odd-imports odd-locals)))
+  
+  (define-for-syntax odd-run-time-declaration
+    (dissect odd-declaration
+      (cronut-declaration
+        _ imports locals _ build-run-time-declaration)
+    #/w- imports
+      (list-map imports #/dissectfn (list import _ _ _) import)
+    #/with-syntax ([(imports ...) imports] [(locals ...) locals])
+    #/apply
+      (syntax-local-eval
+        #`
+        (lambda (imports ... locals ...)
+          #,build-run-time-declaration))
+      (append odd-imports odd-locals)))
+  
+  (define-syntax-parse-rule
+    (odd-run-compiled-expr odd-compiled:id)
+    #:with result (syntax-local-introduce odd-compiled-expr)
+    (define-for-syntax odd-compiled result))
+  
+  (odd-run-compiled-expr odd-compiled)
+  
+  (define-syntax-parse-rule (odd-run-run-time-declaration)
+    
+    #:with result
+    (syntax-local-introduce odd-run-time-declaration)
+    
+    result)
+  
+  
   (define-for-syntax lexical-unit-compile-time
     (module-contents-for-lexical-unit
       (just-value #/simplify-module-spine even-definer-spine)
@@ -100,29 +204,11 @@
           even-declared-lexical-unit
           (just-value #/simplify-module-spine odd-definer-spine)
           odd-declared-lexical-unit)
-        ; TODO: Compute these `compiled-lexical-unit?` values by
-        ; compiling the `declared-lexical-unit?` values.
         (hash
-          even-definer-spine
-          (compiled-lexical-unit
-            (hash 'is-even?
-              (compiled-lexical-unit-entry-for-single-argument-function
-                #'x
-                #'#`(0:is-even? #,x))))
-          odd-definer-spine
-          (compiled-lexical-unit
-            (hash 'is-odd?
-              (compiled-lexical-unit-entry-for-single-argument-function
-                #'x
-                #'#`(1:is-odd? #,x))))))))
+          even-definer-spine even-compiled
+          odd-definer-spine odd-compiled))))
   
-  ; TODO: Compute the run-time declarations below by compiling the
-  ; `declared-lexical-unit?` values.
-  
-  (define (0:is-even? x)
-    (or (zero? x) (1:is-odd? #/sub1 x)))
-  
-  (define (1:is-odd? x)
-    (and (not #/zero? x) (0:is-even? #/sub1 x)))
+  (even-run-run-time-declaration)
+  (odd-run-run-time-declaration)
   
   )
