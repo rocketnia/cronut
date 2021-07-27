@@ -98,9 +98,14 @@
       `(declare-using-racket ,get-declaration)
     #/get-declaration))
   
-  ; TODO: Generate these variables automatically.
-  (define-for-syntax even-imports (list #'0:is-odd?))
-  (define-for-syntax even-locals (list #'0:is-even?))
+  (define-for-syntax even-introduce (make-syntax-introducer))
+  (define-for-syntax even-imports
+    (dissect even-declaration (cronut-declaration _ imports _ _ _)
+    #/list-map imports #/dissectfn (list import _ _ _)
+      (even-introduce import)))
+  (define-for-syntax even-locals
+    (dissect even-declaration (cronut-declaration _ _ locals _ _)
+    #/map even-introduce locals))
   
   (define-for-syntax even-compiled-expr
     (dissect even-declaration
@@ -149,9 +154,14 @@
       `(declare-using-racket ,get-declaration)
     #/get-declaration))
   
-  ; TODO: Generate these variables automatically.
-  (define-for-syntax odd-imports (list #'1:is-even?))
-  (define-for-syntax odd-locals (list #'1:is-odd?))
+  (define-for-syntax odd-introduce (make-syntax-introducer))
+  (define-for-syntax odd-imports
+    (dissect odd-declaration (cronut-declaration _ imports _ _ _)
+    #/list-map imports #/dissectfn (list import _ _ _)
+      (odd-introduce import)))
+  (define-for-syntax odd-locals
+    (dissect odd-declaration (cronut-declaration _ _ locals _ _)
+    #/map odd-introduce locals))
   
   (define-for-syntax odd-compiled-expr
     (dissect odd-declaration
@@ -218,12 +228,41 @@
         #:with result (transform-import #'x)
         result)))
   
-  ; TODO: Do these automatically based on the import lists in the
-  ; declared lexical units.
-  (resolve-single-argument-function
-    0:is-odd? odd-compiled 'is-odd?)
-  (resolve-single-argument-function
-    1:is-even? even-compiled 'is-even?)
+  
+  (define-for-syntax compiled-id-hash
+    (hash
+      even-definer-spine #'even-compiled
+      odd-definer-spine #'odd-compiled))
+  
+  
+  (define-syntax (resolve-imports stx)
+    (syntax-protect
+    #/syntax-parse stx #/ (_ to-ids:expr declaration:expr)
+    #/w- to-ids (syntax-local-eval #'to-ids)
+    #/dissect (syntax-local-eval #'declaration)
+      (cronut-declaration _ imports _ _ _)
+    #/with-syntax
+      (
+        [(to-id ...) (map syntax-local-introduce to-ids)]
+        [
+          (compiled-expr ...)
+          (list-map imports
+            (dissectfn (list _ 'single-argument-function spine _)
+              (hash-ref compiled-id-hash spine)))]
+        [
+          (from-id ...)
+          (list-map imports
+            (dissectfn (list _ 'single-argument-function _ from-id)
+              from-id))])
+      #'
+      (begin
+        (resolve-single-argument-function
+          to-id compiled-expr 'from-id)
+        ...)))
+  
+  
+  (resolve-imports even-imports even-declaration)
+  (resolve-imports odd-imports odd-declaration)
   
   
   (define-for-syntax lexical-unit-compile-time

@@ -70,14 +70,14 @@
       `(declare-using-racket ,get-declaration)
     #/get-declaration))
   
-  ; TODO: Resolve the imports automatically, and generate the
-  ; variables automatically as well (as depicted below).
-  (define-for-syntax add-two-imports (list))
-  (define-for-syntax add-two-locals (list #'0:add-two))
-  #;
+  (define-for-syntax add-two-introduce (make-syntax-introducer))
+  (define-for-syntax add-two-imports
+    (dissect add-two-declaration (cronut-declaration _ imports _ _ _)
+    #/list-map imports #/dissectfn (list import _ _ _)
+      (add-two-introduce import)))
   (define-for-syntax add-two-locals
     (dissect add-two-declaration (cronut-declaration _ _ locals _ _)
-    #/map (make-syntax-introducer) locals))
+    #/map add-two-introduce locals))
   
   (define-for-syntax add-two-compiled-expr
     (dissect add-two-declaration
@@ -119,6 +119,40 @@
     result)
   
   
+  (define-for-syntax compiled-id-hash
+    (hash
+      add-two-definer-spine #'add-two-compiled))
+  
+  
+  (define-syntax (resolve-imports stx)
+    (syntax-protect
+    #/syntax-parse stx #/ (_ to-ids:expr declaration:expr)
+    #/w- to-ids (syntax-local-eval #'to-ids)
+    #/dissect (syntax-local-eval #'declaration)
+      (cronut-declaration _ imports _ _ _)
+    #/with-syntax
+      (
+        [(to-id ...) (map syntax-local-introduce to-ids)]
+        [
+          (compiled-expr ...)
+          (list-map imports
+            (dissectfn (list _ 'single-argument-function spine _)
+              (hash-ref compiled-id-hash spine)))]
+        [
+          (from-id ...)
+          (list-map imports
+            (dissectfn (list _ 'single-argument-function _ from-id)
+              from-id))])
+      #'
+      (begin
+        (resolve-single-argument-function
+          to-id compiled-expr 'from-id)
+        ...)))
+  
+  
+  (resolve-imports add-two-imports add-two-declaration)
+  
+  
   (define-for-syntax lexical-unit-compile-time
     (module-contents-for-lexical-unit
       (just-value #/simplify-module-spine add-two-definer-spine)
@@ -126,7 +160,8 @@
         (hash
           (just-value #/simplify-module-spine add-two-definer-spine)
           add-two-declared-lexical-unit)
-        (hash add-two-definer-spine add-two-compiled))))
+        (hash
+          add-two-definer-spine add-two-compiled))))
   
   (add-two-run-run-time-declaration)
   
