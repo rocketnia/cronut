@@ -79,12 +79,14 @@
     
     (require-definer-host definer-host)
     
-    (define-for-syntax entry-for-import
+    (define-for-syntax compiled
       (dissect definer-host
         (module-contents-for-lexical-unit _
           (here-bundle _ compiled-lexical-units))
-      #/dissect (hash-ref compiled-lexical-units definer-spine)
-        (compiled-lexical-unit functions)
+      #/hash-ref compiled-lexical-units definer-spine))
+    
+    (define-for-syntax entry-for-import
+      (dissect compiled (compiled-lexical-unit functions)
       ; TODO: Handle the case where there is no function by this name.
       #/hash-ref functions from-id))
     

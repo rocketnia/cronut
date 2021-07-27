@@ -98,9 +98,8 @@
       `(declare-using-racket ,get-declaration)
     #/get-declaration))
   
-  ; TODO: Resolve the imports automatically, and generate the
-  ; variables automatically as well.
-  (define-for-syntax even-imports (list #'1:is-odd?))
+  ; TODO: Generate these variables automatically.
+  (define-for-syntax even-imports (list #'0:is-odd?))
   (define-for-syntax even-locals (list #'0:is-even?))
   
   (define-for-syntax even-compiled-expr
@@ -150,9 +149,8 @@
       `(declare-using-racket ,get-declaration)
     #/get-declaration))
   
-  ; TODO: Resolve the imports automatically, and generate the
-  ; variables automatically as well.
-  (define-for-syntax odd-imports (list #'0:is-even?))
+  ; TODO: Generate these variables automatically.
+  (define-for-syntax odd-imports (list #'1:is-even?))
   (define-for-syntax odd-locals (list #'1:is-odd?))
   
   (define-for-syntax odd-compiled-expr
@@ -193,6 +191,39 @@
     (syntax-local-introduce odd-run-time-declaration)
     
     result)
+  
+  
+  ; TODO: This shares some implementation details with
+  ; `import-cronut-single-argument-function`. Factor these out.
+  (define-syntax-parse-rule
+    (resolve-single-argument-function
+      var:id compiled-expr:expr from-id-expr:expr)
+    (begin
+      (define-for-syntax compiled compiled-expr)
+      (define-for-syntax from-id from-id-expr)
+      
+      (define-for-syntax entry-for-import
+        (dissect compiled (compiled-lexical-unit functions)
+        ; TODO: Handle the case where there is no function by this
+        ; name.
+        #/hash-ref functions from-id))
+      
+      (define-for-syntax transform-import
+        (dissect entry-for-import
+          (compiled-lexical-unit-entry-for-single-argument-function
+            x body)
+        #/syntax-local-eval #`(lambda (#,x) #,body)))
+      
+      (define-syntax-parse-rule (var x:expr)
+        #:with result (transform-import #'x)
+        result)))
+  
+  ; TODO: Do these automatically based on the import lists in the
+  ; declared lexical units.
+  (resolve-single-argument-function
+    0:is-odd? odd-compiled 'is-odd?)
+  (resolve-single-argument-function
+    1:is-even? even-compiled 'is-even?)
   
   
   (define-for-syntax lexical-unit-compile-time
