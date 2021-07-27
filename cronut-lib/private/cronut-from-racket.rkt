@@ -36,9 +36,6 @@
   import-cronut-single-argument-function)
 
 
-(define-for-syntax (make-lambda x body)
-  #`(lambda (#,x) #,body))
-
 (define-syntax-parse-rule
   (import-cronut-single-argument-function
     spine-expr:expr from-id-expr:expr var:id)
@@ -91,14 +88,11 @@
       ; TODO: Handle the case where there is no function by this name.
       #/hash-ref functions from-id))
     
-    (begin-for-syntax #/define-namespace-anchor anchor)
-    
     (define-for-syntax transform-import
       (dissect entry-for-import
         (compiled-lexical-unit-entry-for-single-argument-function
           x body)
-      #/eval (make-lambda x body)
-        (namespace-anchor->namespace anchor)))
+      #/syntax-local-eval #`(lambda (#,x) #,body)))
     
     (define-syntax-parse-rule (var x:expr)
       #:with result (transform-import #'x)
