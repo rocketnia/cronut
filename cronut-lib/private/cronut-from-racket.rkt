@@ -83,7 +83,7 @@
     (require-definer-host definer-host)
     
     (define-for-syntax entry-for-import
-      (dissect definer
+      (dissect definer-host
         (module-contents-for-lexical-unit _
           (here-bundle _ compiled-lexical-units))
       #/dissect (hash-ref compiled-lexical-units definer-spine)

@@ -30,39 +30,58 @@
   (require #/for-syntax racket/base)
   
   (require #/for-syntax cronut/private/cronut)
-  
-  (require #/for-syntax #/only-in cronut/private/shim
-    shim-require-various)
+  (require #/for-syntax cronut/private/shim)
   
   (begin-for-syntax #/shim-require-various)
+  
+  (require cronut/private/shim)
+  
+  (shim-require-various)
   
   
   (provide #/for-syntax lexical-unit-compile-time)
   
   
+  (define-for-syntax add-two-definer-spine
+    (make-module-spine 'cronut 'tests '01-define-function-manually))
+  
+  (define-for-syntax add-two-declared-lexical-unit
+    (declared-lexical-unit (set)
+      (list #`#/declare-using-racket #,#/fn #/cronut-declaration
+        (make-module-spine
+          'cronut 'tests '01-define-function-manually)
+        (list)
+        (list #'add-two)
+        #'#`
+        (compiled-lexical-unit
+          (hash 'add-two
+            (compiled-lexical-unit-entry-for-single-argument-function
+              #'x
+              #'#`(#,#'#,add-two #,x))))
+        #'#`
+        (define (#,add-two x)
+          (+ 2 x)))))
+  
+  
   (define-for-syntax lexical-unit-compile-time
     (module-contents-for-lexical-unit
-      (just-value #/simplify-module-spine #/make-module-spine
-        'cronut 'tests '01-define-function-manually)
+      (just-value #/simplify-module-spine add-two-definer-spine)
       (here-bundle
         (hash
-          (just-value #/simplify-module-spine #/make-module-spine
-            'cronut 'tests '01-define-function-manually)
-          (declared-lexical-unit (set)
-            ; TODO: Add syntax objects to this list so that this
-            ; declared lexical unit compiles to the compiled version
-            ; below when it's provided with no arguments. Right now,
-            ; we haven't built the appropriate compiler or any
-            ; suitable syntaxes for it to compile yet.
-            (list)))
+          (just-value #/simplify-module-spine add-two-definer-spine)
+          add-two-declared-lexical-unit)
+        ; TODO: Compute these `compiled-lexical-unit?` values by
+        ; compiling the `declared-lexical-unit?` values.
         (hash
-          (make-module-spine
-            'cronut 'tests '01-define-function-manually)
+          add-two-definer-spine
           (compiled-lexical-unit
             (hash 'add-two
               (compiled-lexical-unit-entry-for-single-argument-function
                 #'x
                 #'#`(0:add-two #,x))))))))
+  
+  ; TODO: Compute the run-time declarations below by compiling the
+  ; `declared-lexical-unit?` values.
   
   (define (0:add-two x)
     (+ 2 x))

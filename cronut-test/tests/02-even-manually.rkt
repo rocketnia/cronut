@@ -32,46 +32,92 @@
   (require #/for-syntax racket/base)
   
   (require #/for-syntax cronut/private/cronut)
-  
-  (require #/for-syntax #/only-in cronut/private/shim
-    shim-require-various)
+  (require #/for-syntax cronut/private/shim)
   
   (begin-for-syntax #/shim-require-various)
+  
+  (require cronut/private/shim)
+  
+  (shim-require-various)
   
   
   (provide #/for-syntax lexical-unit-compile-time)
   
   
+  (define-for-syntax even-definer-spine
+    (make-module-spine 'cronut 'tests '02-even-manually))
+  
+  (define-for-syntax even-declared-lexical-unit
+    (declared-lexical-unit (set)
+      (list #`#/declare-using-racket #,#/fn #/cronut-declaration
+        (make-module-spine 'cronut 'tests '02-even-manually)
+        (list
+          (list #'is-odd? 'single-argument-function
+            (make-module-spine 'cronut 'tests '02-odd-manually)
+            'is-odd?))
+        (list #'is-even?)
+        #'#`
+        (compiled-lexical-unit
+          (hash 'is-even?
+            (compiled-lexical-unit-entry-for-single-argument-function
+              #'x
+              #'#`(#,#'#,is-even? #,x))))
+        #'#`
+        (define (#,is-even? x)
+          (or (zero? x) (#,is-odd? #/sub1 x))))))
+  
+  
+  (define-for-syntax odd-definer-spine
+    (make-module-spine 'cronut 'tests '02-odd-manually))
+  
+  (define-syntax-parse-rule (require-odd-definer odd-definer:id)
+    
+    #:with module-path
+    (expect (simplify-module-spine odd-definer-spine) (just spine)
+      ; TODO: Improve this error message.
+      (error "Tried to import from a Cronut lexical unit whose module spine couldn't be converted to a Racket module path")
+    #/simplified-module-spine->racket-module-path spine)
+    
+    (require #/only-in
+      (submod module-path :%private/generated:cronut:lexical-unit)
+      [lexical-unit-compile-time odd-definer]))
+  
+  (require-odd-definer odd-definer)
+  
+  (define-for-syntax odd-declared-lexical-unit
+    (dissect odd-definer
+      (module-contents-for-lexical-unit _
+        (elsewhere-bundle _ odd-declared-lexical-unit))
+      odd-declared-lexical-unit))
+  
+  
   (define-for-syntax lexical-unit-compile-time
     (module-contents-for-lexical-unit
-      (just-value #/simplify-module-spine #/make-module-spine
-        'cronut 'tests '02-even-manually)
+      (just-value #/simplify-module-spine even-definer-spine)
       (here-bundle
-        ; TODO: Add syntax objects to these empty lists so that these
-        ; declared lexical units compile to the compiled versions
-        ; below when they're provided with no arguments. Right now, we
-        ; haven't built the appropriate compiler or any suitable
-        ; syntaxes for it to compile yet.
         (hash
-          (just-value #/simplify-module-spine #/make-module-spine
-            'cronut 'tests '02-even-manually)
-          (declared-lexical-unit (set) (list))
-          (just-value #/simplify-module-spine #/make-module-spine
-            'cronut 'tests '02-odd-manually)
-          (declared-lexical-unit (set) (list)))
+          (just-value #/simplify-module-spine even-definer-spine)
+          even-declared-lexical-unit
+          (just-value #/simplify-module-spine odd-definer-spine)
+          odd-declared-lexical-unit)
+        ; TODO: Compute these `compiled-lexical-unit?` values by
+        ; compiling the `declared-lexical-unit?` values.
         (hash
-          (make-module-spine 'cronut 'tests '02-even-manually)
+          even-definer-spine
           (compiled-lexical-unit
             (hash 'is-even?
               (compiled-lexical-unit-entry-for-single-argument-function
                 #'x
                 #'#`(0:is-even? #,x))))
-          (make-module-spine 'cronut 'tests '02-odd-manually)
+          odd-definer-spine
           (compiled-lexical-unit
             (hash 'is-odd?
               (compiled-lexical-unit-entry-for-single-argument-function
                 #'x
                 #'#`(1:is-odd? #,x))))))))
+  
+  ; TODO: Compute the run-time declarations below by compiling the
+  ; `declared-lexical-unit?` values.
   
   (define (0:is-even? x)
     (or (zero? x) (1:is-odd? #/sub1 x)))

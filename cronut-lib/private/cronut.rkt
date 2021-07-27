@@ -181,6 +181,20 @@
   
   compiled-lexical-unit/c
   
+  
+  ; Internal representation of Cronut lexical units defined in terms
+  ; of Racket
+
+  cronut-declaration?
+  cronut-declaration-module-spine-with-args
+  cronut-declaration-imports
+  cronut-declaration-locals
+  cronut-declaration-compiled-lexical-unit-template
+  cronut-declaration-run-time-declarations-template
+  cronut-declaration
+  
+  cronut-declaration/c
+  
   )
 
 ; TODO: Consider organizing the various implementation details in this
@@ -638,3 +652,75 @@
       (hash/c interned-symbol?
         (compiled-lexical-unit-entry-for-single-argument-function/c)))
     `(compiled-lexical-unit/c)))
+
+
+
+; ====================================================================
+; Internal representation of Cronut lexical units defined in terms of
+; Racket
+; ====================================================================
+
+
+(define-imitation-simple-struct
+  (cronut-declaration?
+    cronut-declaration-module-spine-with-args
+    cronut-declaration-imports
+    cronut-declaration-locals
+    cronut-declaration-compiled-lexical-unit-template
+    cronut-declaration-run-time-declarations-template)
+  cronut-declaration
+  'cronut-declaration (current-inspector) (auto-write) (auto-equal))
+
+(define (cronut-declaration/c)
+  (rename-contract
+    
+    (match/c cronut-declaration
+      
+      ; NOTE: The symbolic parts of the self-referential module spine
+      ; should be distinct identifiers.
+      (module-spine/c identifier?)
+      
+      (listof #/list/c
+        identifier?
+        'single-argument-function
+        ; NOTE: The symbolic parts of the imported module spine should
+        ; be expressions, and their only free variables should be the
+        ; identifiers appearing in the self-referential module spine.
+        ; (TODO: Should we allow the local variables to appear here
+        ; too?)
+        (module-spine/c syntax?)
+        interned-symbol?)
+      
+      ; NOTE: The local variables should be distinct identifiers.
+      (listof identifier?)
+      
+      ; NOTE: The compiled lexical unit template should be an
+      ; expression, and its only free variables should be the local
+      ; variables and the identifiers appearing in the
+      ; self-referential module spine. If the value of each of those
+      ; is a distinct identifier, then the result of the compiled
+      ; lexical unit template should be a syntax object representing
+      ; an expression with those identifiers as its free variables. If
+      ; those identifiers that correspond to imports are bound to the
+      ; imported values, the generated expression should result in a
+      ; `compiled-lexical-unit?` value.
+      ;
+      syntax?
+      
+      ; NOTE: The run-time declarations template should be an
+      ; expression, and its only free variables should be the local
+      ; variables and the identifiers appearing in the
+      ; self-referential module spine. If the value of each of those
+      ; is a distinct identifier, then the result of the compiled
+      ; lexical unit template should be a syntax object representing a
+      ; module-level declaration with those identifiers as its free
+      ; variables. If those identifiers that correspond to imports are
+      ; bound to the imported values, the generated declaration should
+      ; result in definitions for those identifiers that correspond to
+      ; local variables.
+      ;
+      syntax?
+      
+      )
+    
+    `(cronut-declaration/c)))

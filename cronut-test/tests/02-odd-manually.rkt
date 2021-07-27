@@ -49,11 +49,22 @@
       (elsewhere-bundle
         (just-value #/simplify-module-spine #/make-module-spine
           'cronut 'tests '02-even-manually)
-        ; TODO: Add syntax objects to this empty list so that this
-        ; declared lexical unit compiles to the compiled version in
-        ; `cronut/tests/02-even-manually` when it's provided with no
-        ; arguments. Right now, we haven't built the appropriate
-        ; compiler or any suitable syntaxes for it to compile yet.
-        (declared-lexical-unit (set) (list)))))
+        (declared-lexical-unit (set)
+          (list #`#/declare-using-racket #,#/fn #/cronut-declaration
+            (make-module-spine 'cronut 'tests '02-odd-manually)
+            (list
+              (list #'is-even? 'single-argument-function
+                (make-module-spine 'cronut 'tests '02-even-manually)
+                'is-even?))
+            (list #'is-odd?)
+            #'#`
+            (compiled-lexical-unit
+              (hash 'is-odd?
+                (compiled-lexical-unit-entry-for-single-argument-function
+                  #'x
+                  #'#`(#,#'#,is-odd? #,x))))
+            #'#`
+            (define (#,is-odd? x)
+              (and (not #/zero? x) (#,is-even? #/sub1 x))))))))
   
   )
