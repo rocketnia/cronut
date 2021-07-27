@@ -30,57 +30,14 @@
 
 (require #/for-syntax cronut/private/cronut)
 
-(require #/for-syntax #/only-in cronut/private/shim
-  shim-require-various)
+(require cronut/private/cronut-from-racket)
 
-(begin-for-syntax #/shim-require-various)
-
-(require #/only-in
-  (submod cronut/tests/02-odd-manually
-    :%private/generated:cronut:lexical-unit)
-  [lexical-unit-compile-time definer])
-
-(require #/only-in cronut/private/shim shim-require-various)
-
-(shim-require-various)
+(import-cronut-single-argument-function
+  (make-module-spine 'cronut 'tests '02-odd-manually)
+  'is-odd?
+  is-odd?)
 
 ; (We provide nothing from this module.)
-
-
-(define-syntax-parse-rule (require-definer-host definer-host:id)
-  
-  #:with host
-  (dissect definer
-    (module-contents-for-lexical-unit _ (elsewhere-bundle host _))
-  #/simplified-module-spine->racket-module-path host)
-  
-  (require #/only-in
-    (submod host :%private/generated:cronut:lexical-unit)
-    [lexical-unit-compile-time definer-host]))
-
-(require-definer-host definer-host)
-
-(define-for-syntax entry-for-is-odd?
-  (dissect definer-host
-    (module-contents-for-lexical-unit _
-      (here-bundle _ compiled-lexical-units))
-  #/dissect
-    (hash-ref compiled-lexical-units
-      (make-module-spine 'cronut 'tests '02-odd-manually))
-    (compiled-lexical-unit functions)
-  #/hash-ref functions 'is-odd?))
-
-(begin-for-syntax #/define-namespace-anchor anchor)
-
-(define-for-syntax transform-is-odd?
-  (dissect entry-for-is-odd?
-    (compiled-lexical-unit-entry-for-single-argument-function x body)
-  #/eval #`(lambda (#,x) #,body)
-    (namespace-anchor->namespace anchor)))
-
-(define-syntax-parse-rule (is-odd? x:expr)
-  #:with result (transform-is-odd? #'x)
-  result)
 
 
 (check-equal? (is-odd? 5) #t)

@@ -28,44 +28,14 @@
 
 (require #/for-syntax cronut/private/cronut)
 
-(require #/for-syntax #/only-in cronut/private/shim
-  shim-require-various)
+(require cronut/private/cronut-from-racket)
 
-(begin-for-syntax #/shim-require-various)
-
-(require #/only-in
-  (submod cronut/tests/01-define-function-manually
-    :%private/generated:cronut:lexical-unit)
-  [lexical-unit-compile-time definer])
-
-(require #/only-in cronut/private/shim shim-require-various)
-
-(shim-require-various)
+(import-cronut-single-argument-function
+  (make-module-spine 'cronut 'tests '01-define-function-manually)
+  'add-two
+  add-two)
 
 ; (We provide nothing from this module.)
-
-
-(define-for-syntax entry-for-add-two
-  (dissect definer
-    (module-contents-for-lexical-unit _
-      (here-bundle _ compiled-lexical-units))
-  #/dissect
-    (hash-ref compiled-lexical-units
-      (make-module-spine 'cronut 'tests '01-define-function-manually))
-    (compiled-lexical-unit functions)
-  #/hash-ref functions 'add-two))
-
-(begin-for-syntax #/define-namespace-anchor anchor)
-
-(define-for-syntax transform-add-two
-  (dissect entry-for-add-two
-    (compiled-lexical-unit-entry-for-single-argument-function x body)
-  #/eval #`(lambda (#,x) #,body)
-    (namespace-anchor->namespace anchor)))
-
-(define-syntax-parse-rule (add-two x:expr)
-  #:with result (transform-add-two #'x)
-  result)
 
 
 (check-equal? (add-two 5) 7)
