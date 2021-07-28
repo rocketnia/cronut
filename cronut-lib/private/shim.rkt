@@ -42,6 +42,7 @@
           or/c rename-contract)
         (only-in #,(break 'racket/contract/combinator)
           coerce-contract)
+        (only-in #,(break 'racket/match) match-define)
         (only-in #,(break 'racket/set) set set/c)
         (only-in #,(break 'racket/string) string-join)
         (only-in #,(break 'racket/syntax) syntax-local-eval)

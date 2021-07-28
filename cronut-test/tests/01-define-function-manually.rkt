@@ -34,18 +34,16 @@
   
   (begin-for-syntax #/shim-require-various)
   
-  (require cronut/private/shim)
-  
-  (shim-require-various)
+  (require cronut/private/cronut-from-racket)
   
   
   (provide #/for-syntax lexical-unit-compile-time)
   
   
-  (define-for-syntax add-two-definer-spine
-    (make-module-spine 'cronut 'tests '01-define-function-manually))
-  
-  (define-for-syntax add-two-declared-lexical-unit
+  (define-lexical-unit-compile-time lexical-unit-compile-time
+    (make-module-spine 'cronut 'tests '01-define-function-manually)
+    (list
+      (make-module-spine 'cronut 'tests '01-define-function-manually))
     (declared-lexical-unit (set)
       (list #`#/declare-using-racket #,#/fn #/cronut-declaration
         (make-module-spine
@@ -60,109 +58,4 @@
               #'#`(#,#'#,add-two #,x))))
         #'#`
         (define (#,add-two x)
-          (+ 2 x)))))
-  
-  
-  (define-for-syntax add-two-declaration
-    (dissect add-two-declared-lexical-unit
-      (declared-lexical-unit _ #/list declaration-syntax)
-    #/dissect (syntax->datum declaration-syntax)
-      `(declare-using-racket ,get-declaration)
-    #/get-declaration))
-  
-  (define-for-syntax add-two-introduce (make-syntax-introducer))
-  (define-for-syntax add-two-imports
-    (dissect add-two-declaration (cronut-declaration _ imports _ _ _)
-    #/list-map imports #/dissectfn (list import _ _ _)
-      (add-two-introduce import)))
-  (define-for-syntax add-two-locals
-    (dissect add-two-declaration (cronut-declaration _ _ locals _ _)
-    #/map add-two-introduce locals))
-  
-  (define-for-syntax add-two-compiled-expr
-    (dissect add-two-declaration
-      (cronut-declaration _ imports locals build-compiled _)
-    #/w- imports
-      (list-map imports #/dissectfn (list import _ _ _) import)
-    #/with-syntax ([(imports ...) imports] [(locals ...) locals])
-    #/apply
-      (syntax-local-eval
-        #`(lambda (imports ... locals ...) #,build-compiled))
-      (append add-two-imports add-two-locals)))
-  
-  (define-for-syntax add-two-run-time-declaration
-    (dissect add-two-declaration
-      (cronut-declaration
-        _ imports locals _ build-run-time-declaration)
-    #/w- imports
-      (list-map imports #/dissectfn (list import _ _ _) import)
-    #/with-syntax ([(imports ...) imports] [(locals ...) locals])
-    #/apply
-      (syntax-local-eval
-        #`
-        (lambda (imports ... locals ...)
-          #,build-run-time-declaration))
-      (append add-two-imports add-two-locals)))
-  
-  (define-syntax-parse-rule
-    (add-two-run-compiled-expr add-two-compiled:id)
-    #:with result (syntax-local-introduce add-two-compiled-expr)
-    (define-for-syntax add-two-compiled result))
-  
-  (add-two-run-compiled-expr add-two-compiled)
-  
-  (define-syntax-parse-rule (add-two-run-run-time-declaration)
-    
-    #:with result
-    (syntax-local-introduce add-two-run-time-declaration)
-    
-    result)
-  
-  
-  (define-for-syntax compiled-id-hash
-    (hash
-      add-two-definer-spine #'add-two-compiled))
-  
-  
-  (define-syntax (resolve-imports stx)
-    (syntax-protect
-    #/syntax-parse stx #/ (_ to-ids:expr declaration:expr)
-    #/w- to-ids (syntax-local-eval #'to-ids)
-    #/dissect (syntax-local-eval #'declaration)
-      (cronut-declaration _ imports _ _ _)
-    #/with-syntax
-      (
-        [(to-id ...) (map syntax-local-introduce to-ids)]
-        [
-          (compiled-expr ...)
-          (list-map imports
-            (dissectfn (list _ 'single-argument-function spine _)
-              (hash-ref compiled-id-hash spine)))]
-        [
-          (from-id ...)
-          (list-map imports
-            (dissectfn (list _ 'single-argument-function _ from-id)
-              from-id))])
-      #'
-      (begin
-        (resolve-single-argument-function
-          to-id compiled-expr 'from-id)
-        ...)))
-  
-  
-  (resolve-imports add-two-imports add-two-declaration)
-  
-  
-  (define-for-syntax lexical-unit-compile-time
-    (module-contents-for-lexical-unit
-      (just-value #/simplify-module-spine add-two-definer-spine)
-      (here-bundle
-        (hash
-          (just-value #/simplify-module-spine add-two-definer-spine)
-          add-two-declared-lexical-unit)
-        (hash
-          add-two-definer-spine add-two-compiled))))
-  
-  (add-two-run-run-time-declaration)
-  
-  )
+          (+ 2 x))))))

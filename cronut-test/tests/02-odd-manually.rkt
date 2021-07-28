@@ -32,39 +32,35 @@
   (require #/for-syntax racket/base)
   
   (require #/for-syntax cronut/private/cronut)
-  
-  (require #/for-syntax #/only-in cronut/private/shim
-    shim-require-various)
+  (require #/for-syntax cronut/private/shim)
   
   (begin-for-syntax #/shim-require-various)
+  
+  (require cronut/private/cronut-from-racket)
   
   
   (provide #/for-syntax lexical-unit-compile-time)
   
   
-  (define-for-syntax lexical-unit-compile-time
-    (module-contents-for-lexical-unit
-      (just-value #/simplify-module-spine #/make-module-spine
-        'cronut 'tests '02-odd-manually)
-      (elsewhere-bundle
-        (just-value #/simplify-module-spine #/make-module-spine
-          'cronut 'tests '02-even-manually)
-        (declared-lexical-unit (set)
-          (list #`#/declare-using-racket #,#/fn #/cronut-declaration
-            (make-module-spine 'cronut 'tests '02-odd-manually)
-            (list
-              (list #'is-even? 'single-argument-function
-                (make-module-spine 'cronut 'tests '02-even-manually)
-                'is-even?))
-            (list #'is-odd?)
-            #'#`
-            (compiled-lexical-unit
-              (hash 'is-odd?
-                (compiled-lexical-unit-entry-for-single-argument-function
-                  #'x
-                  #'#`(#,#'#,is-odd? #,x))))
-            #'#`
-            (define (#,is-odd? x)
-              (and (not #/zero? x) (#,is-even? #/sub1 x))))))))
-  
-  )
+  (define-lexical-unit-compile-time lexical-unit-compile-time
+    (make-module-spine 'cronut 'tests '02-odd-manually)
+    (list
+      (make-module-spine 'cronut 'tests '02-even-manually)
+      (make-module-spine 'cronut 'tests '02-odd-manually))
+    (declared-lexical-unit (set)
+      (list #`#/declare-using-racket #,#/fn #/cronut-declaration
+        (make-module-spine 'cronut 'tests '02-odd-manually)
+        (list
+          (list #'is-even? 'single-argument-function
+            (make-module-spine 'cronut 'tests '02-even-manually)
+            'is-even?))
+        (list #'is-odd?)
+        #'#`
+        (compiled-lexical-unit
+          (hash 'is-odd?
+            (compiled-lexical-unit-entry-for-single-argument-function
+              #'x
+              #'#`(#,#'#,is-odd? #,x))))
+        #'#`
+        (define (#,is-odd? x)
+          (and (not #/zero? x) (#,is-even? #/sub1 x)))))))
