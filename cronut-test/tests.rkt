@@ -26,7 +26,7 @@
     hello))
 (require
   (only-in cronut/tests/sample-module-for-cronut-racket-base
-    my-value))
+    my-value my-value-2 my-value-3))
 
 ; (We provide nothing from this module.)
 
@@ -36,3 +36,5 @@
 (check-equal? hello 75)
 
 (check-equal? my-value 75)
+(check-equal? my-value-2 75)
+(check-equal? my-value-3 75)

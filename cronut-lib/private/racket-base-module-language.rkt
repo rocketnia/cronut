@@ -64,7 +64,7 @@
 
 (define-for-syntax (expand-cronut-module-begin decls)
   (expect decls (cons decl decls) #'(begin)
-  #/syntax-parse
+  #/w- expanded-decl
     (local-expand decl 'module
       (list
         
@@ -77,6 +77,7 @@
         #'#%provide
         
         #'#%cronut-declaration))
+  #/syntax-parse (syntax-disarm expanded-decl (current-inspector))
     [
       ({~literal #%cronut-declaration} ~! {~and call (op . args)})
       ; TODO: See if we should add a `disappeared-use` syntax
@@ -165,7 +166,9 @@
   #:methods gen:cronut-declaration-macro
   [
     (define (cronut-declaration-macro-call self stx decls)
-      #`(begin stx #,(expand-cronut-module-begin decls)))])
+      (syntax-protect
+      #/syntax-parse stx #/ (_ decl:expr)
+        #`(begin decl #,(expand-cronut-module-begin decls))))])
 
 (define-syntax example-cronut-declaration
   (example-cronut-declaration-representation))
