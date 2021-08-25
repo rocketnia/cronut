@@ -2,5 +2,6 @@
 
 (define collection "cronut")
 
-(define deps (list "base" "cronut-lib" "rackunit-lib"))
-(define build-deps (list "lathe-comforts-lib" "parendown-lib"))
+(define deps (list "base" "rackunit-lib"))
+(define build-deps
+  (list "cronut-lib" "lathe-comforts-lib" "parendown-lib"))

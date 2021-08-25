@@ -1,8 +1,8 @@
-#lang cronut/racket-default-reader
+#lang cronut/racket/base
 
-; cronut/tests/sample-module-for-cronut-racket-default-reader
+; cronut/tests/sample-module-for-cronut-racket-base
 ;
-; A sample module for `#lang cronut/racket-default-reader`.
+; A sample module for `#lang cronut/racket/base`.
 
 ;   Copyright 2021 The Cronut Authors
 ;
@@ -19,4 +19,7 @@
 ;   language governing permissions and limitations under the License.
 
 
-75
+(provide my-value)
+
+
+(define my-value 75)

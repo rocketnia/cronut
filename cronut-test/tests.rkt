@@ -19,13 +19,14 @@
 ;   language governing permissions and limitations under the License.
 
 
-(require rackunit)
-
-(require cronut)
+(require (only-in rackunit check-equal?))
 
 (require
   (only-in cronut/tests/sample-module-for-cronut-racket-default-reader
     hello))
+(require
+  (only-in cronut/tests/sample-module-for-cronut-racket-base
+    my-value))
 
 ; (We provide nothing from this module.)
 
@@ -33,3 +34,5 @@
 ; TODO: Write more unit tests.
 
 (check-equal? hello 75)
+
+(check-equal? my-value 75)
