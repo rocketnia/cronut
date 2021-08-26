@@ -38,11 +38,19 @@
 (provide #/except-out (all-from-out racket/base) #%module-begin)
 (provide
   ; TODO: See if we should really provide these from here.
+  begin-for-meta
+  ; TODO: We can only use `struct-out` at phase 0. Let's consider
+  ; doing that. We might want to export this struct in a more strict
+  ; way than `struct-out`, and we might want to export it from a
+  ; different module.
+;  (for-syntax (struct-out annotated-decl))
+  (for-syntax cronut-module-begin-continuation?)
   (for-syntax cronut-declaration-macro?)
   (for-syntax gen:cronut-declaration-macro)
   (for-syntax cronut-declaration-macro-call)
   #%cronut-declaration
   (for-syntax expand-cronut-module-begin)
+  continue-cronut-module-begin
   example-cronut-declaration)
 (provide #/rename-out [-#%module-begin #%module-begin])
 
@@ -61,10 +69,12 @@
 
 (begin-for-syntax #/struct annotated-decl (phase decl-stx))
 
+(begin-for-syntax #/struct cronut-module-begin-continuation (decls))
+
 
 (begin-for-syntax #/define-generics cronut-declaration-macro
   (cronut-declaration-macro-call
-    cronut-declaration-macro phase stx decls))
+    cronut-declaration-macro phase stx cont))
 
 
 (begin-for-syntax #/struct cronut-declaration-representation ()
@@ -77,8 +87,10 @@
   (cronut-declaration-representation))
 
 
-(define-for-syntax (expand-cronut-module-begin decls)
-  (expect decls (cons decl decls) #'(begin)
+(define-for-syntax (expand-cronut-module-begin cont)
+  (dissect cont (cronut-module-begin-continuation decls)
+  #/expect decls (cons decl decls) #'(begin)
+  #/w- cont (cronut-module-begin-continuation decls)
   #/dissect decl (annotated-decl phase decl)
   #/w- expanded-decl
     (local-expand decl 'module
@@ -109,7 +121,9 @@
       #`
       (begin
         (begin-for-meta #,phase #,decl)
-        #,(expand-cronut-module-begin decls)))
+        ; We trampoline so that the next partial expansion can take
+        ; into account the syntaxes defined by `decl`.
+        (continue-cronut-module-begin #,cont)))
   #/syntax-parse disarmed-expanded-decl
     [
       ({~literal #%cronut-declaration} . args)
@@ -120,7 +134,7 @@
       #/w- op (syntax-local-value #'op)
       #/expect (cronut-declaration-macro? op) #t
         (error "encountered a #%cronut-declaration with an operation that wasn't a Cronut declaration macro")
-      #/cronut-declaration-macro-call op phase #'call decls)]
+      #/cronut-declaration-macro-call op phase #'call cont)]
     [
       ; NOTE: This matches anything that's an expression.
       (
@@ -168,7 +182,7 @@
     [
       ({~literal begin} . args)
       (syntax-parse disarmed-expanded-decl #/ (_ begin-decls:expr ...)
-      #/expand-cronut-module-begin
+      #/expand-cronut-module-begin #/cronut-module-begin-continuation
         (append
           (for/list
             ([decl (in-list (syntax->list #'(begin-decls ...)))])
@@ -178,7 +192,7 @@
       ({~literal begin-for-syntax} . args)
       (syntax-parse disarmed-expanded-decl #/ (_ begin-decls:expr ...)
       #/w- phase (add1 phase)
-      #/expand-cronut-module-begin
+      #/expand-cronut-module-begin #/cronut-module-begin-continuation
         (append
           (for/list
             ([decl (in-list (syntax->list #'(begin-decls ...)))])
@@ -278,13 +292,28 @@
   (fn self stx
     (syntax-protect
     #/syntax-parse stx #/ (_ decl:expr ...)
-    #/w- decl
-      (expand-cronut-module-begin
+    #/w- cont
+      (cronut-module-begin-continuation
         (for/list ([decl (in-list (syntax->list #'(decl ...)))])
           (annotated-decl 0 decl)))
-      #`(#%module-begin #,decl))))
+      #`(#%module-begin (continue-cronut-module-begin #,cont)))))
 
 (define-syntax -#%module-begin (module-begin-representation))
+
+(begin-for-syntax #/struct continue-cronut-module-begin-representation
+  ()
+  #:property prop:expansion-contexts (list 'module)
+  #:property prop:procedure
+  (fn self stx
+    (syntax-protect
+    #/syntax-parse stx #/ (_ cont)
+    #/w- cont (syntax-e #'cont)
+    #/expect (cronut-module-begin-continuation? cont) #t
+      (error "expected cont to be a Cronut #%module-begin continuation")
+    #/expand-cronut-module-begin cont)))
+
+(define-syntax continue-cronut-module-begin
+  (continue-cronut-module-begin-representation))
 
 
 (begin-for-syntax #/struct example-cronut-declaration-representation
@@ -296,13 +325,15 @@
       #`(#%cronut-declaration #,stx)))
   #:methods gen:cronut-declaration-macro
   [
-    (define (cronut-declaration-macro-call self phase stx decls)
+    (define (cronut-declaration-macro-call self phase stx cont)
       (syntax-protect
       #/syntax-parse stx #/ (_ decl:expr)
         #`
         (begin
           (begin-for-meta #,phase decl)
-          #,(expand-cronut-module-begin decls))))])
+          ; We trampoline so that the next partial expansion can take
+          ; into account the syntaxes defined by `decl`.
+          (continue-cronut-module-begin #,cont))))])
 
 (define-syntax example-cronut-declaration
   (example-cronut-declaration-representation))
