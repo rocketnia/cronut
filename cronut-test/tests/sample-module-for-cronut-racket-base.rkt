@@ -19,9 +19,13 @@
 ;   language governing permissions and limitations under the License.
 
 
+(require (only-in racket/contract/base contract-out))
+
+
 (provide
   my-value
-  my-value-2
+  (contract-out
+    [my-value-2 exact-nonnegative-integer?])
   my-value-3)
 
 
