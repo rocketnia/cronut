@@ -48,7 +48,7 @@
         (only-in #,(break 'racket/string) string-join)
         (only-in #,(break 'racket/syntax) syntax-local-eval)
         (only-in #,(break 'syntax/parse)
-          ~and expr id ~literal ~or syntax-parse)
+          ~and expr id ~literal nat ~or syntax-parse)
         (only-in #,(break 'syntax/parse/define)
           define-syntax-parse-rule)
         

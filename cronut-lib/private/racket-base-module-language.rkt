@@ -48,8 +48,23 @@
 
 
 
+(define-syntax (begin-for-meta stx)
+  (syntax-protect
+  #/syntax-parse stx #/ (_ phase:nat step:expr ...)
+  #/w- steps
+    (for/fold
+      ([steps #'(step ...)])
+      ([i (in-range (syntax-e #'phase))])
+      #`((begin-for-syntax #,@steps)))
+    #`(begin #,@steps)))
+
+
+(begin-for-syntax #/struct annotated-decl (phase decl-stx))
+
+
 (begin-for-syntax #/define-generics cronut-declaration-macro
-  (cronut-declaration-macro-call cronut-declaration-macro stx decls))
+  (cronut-declaration-macro-call
+    cronut-declaration-macro phase stx decls))
 
 
 (begin-for-syntax #/struct cronut-declaration-representation ()
@@ -64,6 +79,7 @@
 
 (define-for-syntax (expand-cronut-module-begin decls)
   (expect decls (cons decl decls) #'(begin)
+  #/dissect decl (annotated-decl phase decl)
   #/w- expanded-decl
     (local-expand decl 'module
       (list
@@ -90,7 +106,10 @@
     (syntax-disarm expanded-decl (current-inspector))
   #/w- use-normal-semantics
     (fn
-      #`(begin #,decl #,(expand-cronut-module-begin decls)))
+      #`
+      (begin
+        (begin-for-meta #,phase #,decl)
+        #,(expand-cronut-module-begin decls)))
   #/syntax-parse disarmed-expanded-decl
     [
       ({~literal #%cronut-declaration} . args)
@@ -101,12 +120,16 @@
       #/w- op (syntax-local-value #'op)
       #/expect (cronut-declaration-macro? op) #t
         (error "encountered a #%cronut-declaration with an operation that wasn't a Cronut declaration macro")
-      #/cronut-declaration-macro-call op #'call decls)]
+      #/cronut-declaration-macro-call op phase #'call decls)]
     [
       ({~literal begin} . args)
       (syntax-parse disarmed-expanded-decl #/ (_ begin-decls:expr ...)
       #/expand-cronut-module-begin
-        (append (syntax->list #'(begin-decls ...)) decls))]
+        (append
+          (for/list
+            ([decl (in-list (syntax->list #'(begin-decls ...)))])
+            (annotated-decl phase decl))
+          decls))]
     [
       (
         {~or
@@ -161,8 +184,14 @@
       (use-normal-semantics)]
     [
       ({~literal begin-for-syntax} . args)
-      ; TODO EXPANDER
-      (error "begin-for-syntax: not implemented yet for Cronut")]
+      (syntax-parse disarmed-expanded-decl #/ (_ begin-decls:expr ...)
+      #/w- phase (add1 phase)
+      #/expand-cronut-module-begin
+        (append
+          (for/list
+            ([decl (in-list (syntax->list #'(begin-decls ...)))])
+            (annotated-decl phase decl))
+          decls))]
     [
       ({~literal define-syntaxes} . args)
       ; TODO EXPANDER
@@ -248,7 +277,10 @@
   (fn self stx
     (syntax-protect
     #/syntax-parse stx #/ (_ decl:expr ...)
-    #/w- decl (expand-cronut-module-begin (syntax->list #'(decl ...)))
+    #/w- decl
+      (expand-cronut-module-begin
+        (for/list ([decl (in-list (syntax->list #'(decl ...)))])
+          (annotated-decl 0 decl)))
       #`(#%module-begin #,decl))))
 
 (define-syntax -#%module-begin (module-begin-representation))
@@ -263,10 +295,13 @@
       #`(#%cronut-declaration #,stx)))
   #:methods gen:cronut-declaration-macro
   [
-    (define (cronut-declaration-macro-call self stx decls)
+    (define (cronut-declaration-macro-call self phase stx decls)
       (syntax-protect
       #/syntax-parse stx #/ (_ decl:expr)
-        #`(begin decl #,(expand-cronut-module-begin decls))))])
+        #`
+        (begin
+          (begin-for-meta #,phase decl)
+          #,(expand-cronut-module-begin decls))))])
 
 (define-syntax example-cronut-declaration
   (example-cronut-declaration-representation))
