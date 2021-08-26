@@ -122,15 +122,7 @@
         (error "encountered a #%cronut-declaration with an operation that wasn't a Cronut declaration macro")
       #/cronut-declaration-macro-call op phase #'call decls)]
     [
-      ({~literal begin} . args)
-      (syntax-parse disarmed-expanded-decl #/ (_ begin-decls:expr ...)
-      #/expand-cronut-module-begin
-        (append
-          (for/list
-            ([decl (in-list (syntax->list #'(begin-decls ...)))])
-            (annotated-decl phase decl))
-          decls))]
-    [
+      ; NOTE: This matches anything that's an expression.
       (
         {~or
           
@@ -174,14 +166,14 @@
 ;      (error "expression at the module level: not implemented yet for Cronut")
       ]
     [
-      ({~literal #%declare} . args)
-      
-      ; TODO EXPANDER: See if we really want to use the normal
-      ; semantics for `#%declare`. Perhaps some segments of a module
-      ; can be cross-phase persistent, unsafe, and/or free of
-      ; `module->namespace` lexical information.
-      ;
-      (use-normal-semantics)]
+      ({~literal begin} . args)
+      (syntax-parse disarmed-expanded-decl #/ (_ begin-decls:expr ...)
+      #/expand-cronut-module-begin
+        (append
+          (for/list
+            ([decl (in-list (syntax->list #'(begin-decls ...)))])
+            (annotated-decl phase decl))
+          decls))]
     [
       ({~literal begin-for-syntax} . args)
       (syntax-parse disarmed-expanded-decl #/ (_ begin-decls:expr ...)
@@ -192,6 +184,15 @@
             ([decl (in-list (syntax->list #'(begin-decls ...)))])
             (annotated-decl phase decl))
           decls))]
+    [
+      ({~literal #%declare} . args)
+      
+      ; TODO EXPANDER: See if we really want to use the normal
+      ; semantics for `#%declare`. Perhaps some segments of a module
+      ; can be cross-phase persistent, unsafe, and/or free of
+      ; `module->namespace` lexical information.
+      ;
+      (use-normal-semantics)]
     [
       ({~literal define-syntaxes} . args)
       ; TODO EXPANDER
