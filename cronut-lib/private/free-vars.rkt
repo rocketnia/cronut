@@ -273,11 +273,10 @@
         #/fn quotes
           (just #/list expr-stx))
       #/fn table
-        (dissect (just-value #/free-vars-table-quotes table)
-          ; TODO: Use a more compelling data structure than a list.
-          (list static-quote dynamic-quote)
-        #/rearm #/dynamic-quote
-          #`(quote-syntax #,(static-quote #'datum) . maybe-local)))]
+        (w- make-quote-syntax
+          (just-value #/free-vars-table-quotes table)
+        #/rearm #/make-quote-syntax #'datum #/fn datum
+          #`(quote-syntax #,datum . maybe-local)))]
     [
       ({~literal #%top} ~! . var:id)
       ; TODO EXPANDER: See what we should do about `#%top` references.
