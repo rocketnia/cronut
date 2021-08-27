@@ -43,6 +43,7 @@
         (only-in #,(break 'racket/contract/combinator)
           coerce-contract)
         (only-in #,(break 'racket/generic) define-generics)
+        (only-in #,(break 'racket/hash) hash-union)
         (only-in #,(break 'racket/match) match-define)
         (only-in #,(break 'racket/set) set set/c)
         (only-in #,(break 'racket/string) string-join)

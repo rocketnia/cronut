@@ -28,30 +28,75 @@
 ; TODO: Provide things from here.
 
 
-(struct free-vars-table (phase quotes gets sets))
+(struct free-vars-table (phase maybes tables))
 
 (define (make-free-vars-table phase)
   (free-vars-table
     phase
-    (nothing)
-    (make-immutable-bound-id-table phase)
-    (make-immutable-bound-id-table phase)))
+    (hash 'quotes (nothing) 'anonvarrefs (nothing))
+    (hash
+      'gets (make-immutable-bound-id-table phase)
+      'sets (make-immutable-bound-id-table phase)
+      'tops (make-immutable-bound-id-table phase)
+      'varrefs (make-immutable-bound-id-table phase)
+      'topvarrefs (make-immutable-bound-id-table phase))))
 
 (define (make-free-vars-table-like table)
-  (dissect table (free-vars-table phase _ _ _)
+  (dissect table (free-vars-table phase _ _)
   #/make-free-vars-table phase))
 
+(define (free-vars-table-subtable-maybe table maybe-key)
+  (dissect table (free-vars-table phase maybes tables)
+  #/hash-ref maybes maybe-key))
+(define (free-vars-table-update-maybe table maybe-key update)
+  (dissect table (free-vars-table phase maybes tables)
+  #/free-vars-table phase
+    (hash-update maybes maybe-key #/fn quotes #/update quotes)
+    tables))
+
+(define (free-vars-table-subtable-table table table-key)
+  (dissect table (free-vars-table phase maybes tables)
+  #/hash-ref tables table-key))
+(define (free-vars-table-update-table table table-key update)
+  (dissect table (free-vars-table phase maybes tables)
+  #/free-vars-table phase
+    maybes
+    (hash-update tables table-key #/fn gets #/update gets)))
+
+(define (free-vars-table-quotes table update)
+  (free-vars-table-subtable-maybe table 'quotes))
 (define (free-vars-table-update-quotes table update)
-  (dissect table (free-vars-table phase quotes gets sets)
-  #/free-vars-table phase (update quotes) gets sets))
+  (free-vars-table-update-maybe table 'quotes update))
 
+(define (free-vars-table-anonvarrefs table update)
+  (free-vars-table-subtable-maybe table 'anonvarrefs))
+(define (free-vars-table-update-anonvarrefs table update)
+  (free-vars-table-update-maybe table 'anonvarrefs update))
+
+(define (free-vars-table-gets table update)
+  (free-vars-table-subtable-table table 'gets))
 (define (free-vars-table-update-gets table update)
-  (dissect table (free-vars-table phase quotes gets sets)
-  #/free-vars-table phase quotes (update gets) sets))
+  (free-vars-table-update-table table 'gets update))
 
+(define (free-vars-table-sets table update)
+  (free-vars-table-subtable-table table 'sets))
 (define (free-vars-table-update-sets table update)
-  (dissect table (free-vars-table phase quotes gets sets)
-  #/free-vars-table phase quotes gets (update sets)))
+  (free-vars-table-update-table table 'sets update))
+
+(define (free-vars-table-tops table update)
+  (free-vars-table-subtable-table table 'tops))
+(define (free-vars-table-update-tops table update)
+  (free-vars-table-update-table table 'tops update))
+
+(define (free-vars-table-varrefs table update)
+  (free-vars-table-subtable-table table 'varrefs))
+(define (free-vars-table-update-varrefs table update)
+  (free-vars-table-update-table table 'varrefs update))
+
+(define (free-vars-table-topvarrefs table update)
+  (free-vars-table-subtable-table table 'topvarrefs))
+(define (free-vars-table-update-topvarrefs table update)
+  (free-vars-table-update-table table 'topvarrefs update))
 
 (define (bound-id-table-ref-maybe table key)
   (define sentinel (box #f))
@@ -86,22 +131,26 @@
     (bound-id-table-remove result k)))
 
 (define (free-vars-table-union a b elems-merge)
-  (dissect a (free-vars-table a-phase a-quotes a-gets a-sets)
-  #/dissect b (free-vars-table b-phase b-quotes b-gets b-sets)
+  (dissect a (free-vars-table a-phase a-maybes a-tables)
+  #/dissect b (free-vars-table b-phase b-maybes b-tables)
   #/dissect (equal? a-phase b-phase) #t
   #/free-vars-table a-phase
-    (maybe-union a-quotes b-quotes elems-merge)
-    (bound-id-table-union a-gets b-gets elems-merge)
-    (bound-id-table-union a-sets b-sets elems-merge)))
+    (hash-union a-maybes b-maybes #/fn a-maybe b-maybe
+      (maybe-union a-maybe b-maybe elems-merge))
+    (hash-union a-tables b-tables #/fn a-table b-table
+      (bound-id-table-union a-table b-table elems-merge))))
 
 (define (free-vars-table-minus a b)
-  (dissect a (free-vars-table a-phase a-quotes a-gets a-sets)
-  #/dissect b (free-vars-table b-phase b-quotes b-gets b-sets)
+  (dissect a (free-vars-table a-phase a-maybes a-tables)
+  #/dissect b (free-vars-table b-phase b-maybes b-tables)
   #/dissect (equal? a-phase b-phase) #t
   #/free-vars-table a-phase
-    (maybe-minus a-quotes b-quotes)
-    (bound-id-table-minus a-gets b-gets)
-    (bound-id-table-minus a-sets b-sets)))
+    (for/hash ([(k a-maybe) (in-hash a-maybes)])
+      (define b-maybe (hash-ref b-maybes k))
+      (maybe-minus a-maybe b-maybe))
+    (for/hash ([(k a-table) (in-hash a-tables)])
+      (define b-table (hash-ref b-tables k))
+      (bound-id-table-minus a-table b-table))))
 
 (struct suppliable (free-vars-set populate))
 
@@ -141,6 +190,10 @@
         (free-vars-table-update-sets table #/fn sets
           (bound-id-table-set sets var #/fn val make-set
             (make-set val)))
+      #/w- table
+        (free-vars-table-update-varrefs table #/fn varrefs
+          (bound-id-table-set varrefs var #/fn val make-varref
+            (make-varref val)))
         table))
   #/syntax-parse formals
     [_:id (add formals)]
@@ -228,7 +281,8 @@
         (with-syntax ([(_ val ...) vals] [(_ body ...) vars-and-body])
         #/rearm #`(letrec-values ([(var ...) val] ...) body ...)))]
     [
-      ({~literal let-values} ~! ([(var:id ...) val:expr] ...)
+      (
+        {~literal let-values} ~! ([(var:id ...) val:expr] ...)
         body:expr ...+)
       (suppliable-map
         (suppliable-list-distribute #/list
@@ -279,17 +333,53 @@
           #`(quote-syntax #,datum . maybe-local)))]
     [
       ({~literal #%top} ~! . var:id)
-      ; TODO EXPANDER: See what we should do about `#%top` references.
-      ; Maybe they're their own kind of free variable.
-      (error "#%top: not implemented yet for Cronut")]
+      (suppliable
+        (free-vars-table-update-tops
+          (make-free-vars-table phase)
+        #/fn tops
+          (bound-id-table-set tops #'var #/list #'var))
+      #/fn table
+        (w- make-top
+          (bound-id-table-ref (free-vars-table-tops table) #'var)
+        #/rearm #/make-top disarmed-expr))]
     [
-      (
-        {~literal #%variable-reference} ~!
-        . {~and args {~or () (var:id) ({~literal #%top} . var:id)}})
-      ; TODO EXPANDER: See what we should do about
-      ; `#%variable-reference` references. Maybe they're their own
-      ; kind of free variable.
-      (error "#%variable-reference: not implemented yet for Cronut")]
+      ({~literal #%variable-reference} . args)
+      (syntax-parse #'args
+        [
+          ()
+          (suppliable
+            (free-vars-table-update-anonvarrefs
+              (make-free-vars-table phase)
+            #/fn anonvarrefs
+              (just #/list expr-stx))
+          #/fn table
+            (w- make-anonvarref
+              (just-value #/free-vars-table-anonvarrefs table)
+            #/rearm #/make-anonvarref disarmed-expr))]
+        [
+          (var:id)
+          (suppliable
+            (free-vars-table-update-varrefs
+              (make-free-vars-table phase)
+            #/fn varrefs
+              (bound-id-table-set varrefs #'var #/list #'var))
+          #/fn table
+            (w- make-varref
+              (bound-id-table-ref (free-vars-table-varrefs table)
+                #'var)
+            #/rearm #/make-varref disarmed-expr))]
+        [
+          (({~literal #%top} . var:id))
+          (suppliable
+            (free-vars-table-update-topvarrefs
+              (make-free-vars-table phase)
+            #/fn topvarrefs
+              (bound-id-table-set topvarrefs #'var #/list #'var))
+          #/fn table
+            (w- make-topvarref
+              (bound-id-table-ref (free-vars-table-topvarrefs table)
+                #'var)
+            #/rearm #/make-topvarref disarmed-expr))])]
     [
       (
         {~literal with-continuation-mark} ~! key:expr val:expr
