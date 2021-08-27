@@ -1,6 +1,6 @@
 #lang parendown racket/base
 
-; cronut/private/racket-base-module-language.rkt
+; cronut/private/racket-base-module-language
 ;
 ; The expansion-time module language corresponding to the language
 ; `#lang cronut/racket/base`, which defines a Racket module that has

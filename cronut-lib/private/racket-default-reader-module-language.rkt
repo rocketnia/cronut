@@ -1,6 +1,6 @@
 #lang racket/base
 
-; cronut/private/racket-default-reader-module-language.rkt
+; cronut/private/racket-default-reader-module-language
 ;
 ; The expansion-time module language corresponding to the language
 ; `#lang cronut/racket-default-reader`, which defines a Cronut module
