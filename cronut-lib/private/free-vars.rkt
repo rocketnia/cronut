@@ -33,11 +33,81 @@
 (define (make-free-vars-table phase)
   (free-vars-table
     phase
-    (hash 'quotes (nothing) 'anonvarrefs (nothing))
+    (hash
+      'quotes (nothing)
+      'anonvarrefs (nothing)
+      
+      ; TODO: Consider adding uses of
+      ;
+      ;  (#%plain-app variable-reference-from-unsafe?
+      ;    (#%variable-reference))
+      ;
+      ; as their own kind of free variable here. Actually, we might
+      ; be able to compute this statically in Cronut.
+      
+      )
     (hash
       'gets (make-immutable-bound-id-table phase)
       'sets (make-immutable-bound-id-table phase)
       'tops (make-immutable-bound-id-table phase)
+      
+      ; Variable references seem to keep track of a few things:
+      ;
+      ;  - The variable's phase. (We can compute this statically.)
+      ;
+      ;  - Whether the variable is constant. (We can compute this
+      ;    statically, with a second traversal over the syntax.)
+      ;
+      ;  - Whether the variable reference form was compiled in unsafe
+      ;    mode. (Can we compute this statically?)
+      ;
+      ;  - If we obtained the reference using
+      ;    `(#%variable-reference id)`, whether the variable refers to
+      ;    a module binding. (We can compute this statically.)
+      ;
+      ;  - If we obtained the reference using
+      ;    `(#%variable-reference id)`, if the variable refers to a
+      ;    module binding, and if that module is being compiled, the
+      ;    module path of that module (giving information like the
+      ;    module path index, the module source, the namespace, etc.).
+      ;    (Can we compute this statically?)
+      ;
+      ;  - If the variable refers to a module binding, the offset of
+      ;    the module's base phase relative to the variable's phase.
+      ;    (We can compute this statically.) (Does this depend on how
+      ;    we obtained the reference? If we obtained it using
+      ;    `(#%variable-reference (#%top . id))`, do we get the offset
+      ;    of the base phase of the module that compiled the form
+      ;    instead?)
+      ;
+      ;  - If we obtained the reference using
+      ;    `(#%variable-reference (#%top . id))`, whether that form
+      ;    was compiled as part of a module.
+      ;
+      ;  - If we obtained the reference using
+      ;    `(#%variable-reference (#%top . id))`, and if that form was
+      ;    compiled as part of a module that's being compiled, the
+      ;    module path of that module (giving various information).
+      ;    (Can we compute this statically?)
+      ;
+      ;  - (Variable references tie into the BC extension API somehow.
+      ;    What does that entail?)
+      ;
+      ;  - (Are we missing some things?)
+      ;
+      ; (TODO: Answer some of these questions.)
+      ;
+      ; Virtually all of this seems to be statically computable, which
+      ; might even be the point. The parts that refer to module
+      ; bindings probably become trivial when `id` is a local variable
+      ; name, too. The one part that seems like it could vary between
+      ; the outside and the inside of a local variable scope is the
+      ; question of whether the variable going by that name is
+      ; constant (`variable-reference-constant?`). But since there is
+      ; one thing that varies that way, we maintain information about
+      ; `#%variable-reference` occurrences using variable-name-keyed
+      ; tables rather than sharing it across all variable names.
+      ;
       'varrefs (make-immutable-bound-id-table phase)
       'topvarrefs (make-immutable-bound-id-table phase))))
 
@@ -191,9 +261,16 @@
           (bound-id-table-set sets var #/fn val make-set
             (make-set val)))
       #/w- table
+        (free-vars-table-update-tops table #/fn tops
+          (bound-id-table-set tops var #/fn expr expr))
+      #/w- table
         (free-vars-table-update-varrefs table #/fn varrefs
           (bound-id-table-set varrefs var #/fn val make-varref
             (make-varref val)))
+      #/w- table
+        (free-vars-table-update-topvarrefs table #/fn topvarrefs
+          (bound-id-table-set topvarrefs var #/fn val make-topvarref
+            (make-topvarref val)))
         table))
   #/syntax-parse formals
     [_:id (add formals)]
