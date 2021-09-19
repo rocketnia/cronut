@@ -1,6 +1,6 @@
 # Cronut
 
-[![Travis build](https://travis-ci.org/rocketnia/cronut.svg?branch=main)](https://travis-ci.org/rocketnia/cronut)
+[![CI](https://github.com/rocketnia/cronut/actions/workflows/ci.yml/badge.svg)](https://github.com/rocketnia/cronut/actions/workflows/ci.yml)
 
 It's more fun to program when we can forget what we're programming for. 
 
