@@ -120,13 +120,73 @@
     (fn
       #`
       (begin
-        (begin-for-meta #,phase #,decl)
+        ; TODO NOW: See if we should rearm `disarmed-expanded-decl`.
+        (begin-for-meta #,phase #,disarmed-expanded-decl)
+        
         ; We trampoline so that the next partial expansion can take
-        ; into account the syntaxes defined by `decl`.
+        ; into account the syntaxes defined by
+        ; `disarmed-expanded-decl`.
+        ;
         (continue-cronut-module-begin #,cont)))
+    (define-literal-set decl-litset
+      (
+        #%cronut-declaration
+        
+        begin0
+        case-lambda
+        if
+        letrec-values
+        let-values
+        #%plain-app
+        #%plain-lambda
+        set!
+        #%top
+        #%variable-reference
+        with-continuation-mark
+        
+        #%expression
+        letrec-syntaxes+values
+        
+        quote
+        quote-syntax
+        
+        begin
+        
+        begin-for-syntax
+        
+        #%declare
+        
+        define-syntaxes
+        
+        define-values
+        
+        module
+        
+        module*
+        
+        #%provide
+        
+        #%require))
   #/syntax-parse disarmed-expanded-decl
+    
+    ; NOTE: The `#:phase` argument here determines which phase of the
+    ; match subject's lexical information to consult when determining
+    ; a match for a literal. The literal set's literals all use the
+    ; lexical information of the phase this code is in (phase 1 of the
+    ; module you're reading at this moment).
+    ;
+    ; If we used `~literal` instead of literal sets, it might be less
+    ; error-prone if we make a typo, but the documentation for
+    ; `~literal`'s `#:phase` argument suggests it configures *both*
+    ; the phase used by the match subject and the phase used by the
+    ; literal we're comparing it to, so it wouldn't have the correct
+    ; functionality. (TODO: I haven't checked if my reading of that
+    ; documentation is consistent with how it actually works.)
+    ;
+    #:literal-sets ([decl-litset #:phase phase])
+    
     [
-      ({~literal #%cronut-declaration} . args)
+      (#%cronut-declaration . args)
       (syntax-parse disarmed-expanded-decl #/
         (_ {~and call (op . args)})
       ; TODO: See if we should add a `disappeared-use` syntax
@@ -143,29 +203,29 @@
           ; Expression syntaxes that are part of both the
           ; `local-expand` default stop list and the syntax of
           ; module-level declarations in fully expanded programs.
-          {~literal begin0}
-          {~literal case-lambda}
-          {~literal if}
-          {~literal letrec-values}
-          {~literal let-values}
-          {~literal #%plain-app}
-          {~literal #%plain-lambda}
-          {~literal set!}
-          {~literal #%top}
-          {~literal #%variable-reference}
-          {~literal with-continuation-mark}
+          begin0
+          case-lambda
+          if
+          letrec-values
+          let-values
+          #%plain-app
+          #%plain-lambda
+          set!
+          #%top
+          #%variable-reference
+          with-continuation-mark
           
           ; Expression syntaxes that are part of the `local-expand`
           ; default stop list but not part of the syntax of
           ; module-level declarations in fully expanded programs.
-          {~literal #%expression}
-          {~literal letrec-syntaxes+values}
+          #%expression
+          letrec-syntaxes+values
           
           ; Expression syntaxes that are part of the syntax of
           ; module-level declarations in fully expanded programs but
           ; not part of the `local-expand` default stop list.
-          {~literal quote}
-          {~literal quote-syntax}
+          quote
+          quote-syntax
           
           }
         . args)
@@ -180,7 +240,7 @@
 ;      (error "expression at the module level: not implemented yet for Cronut")
       ]
     [
-      ({~literal begin} . args)
+      (begin . args)
       (syntax-parse disarmed-expanded-decl #/ (_ begin-decls:expr ...)
       #/expand-cronut-module-begin #/cronut-module-begin-continuation
         (append
@@ -189,7 +249,7 @@
             (annotated-decl phase decl))
           decls))]
     [
-      ({~literal begin-for-syntax} . args)
+      (begin-for-syntax . args)
       (syntax-parse disarmed-expanded-decl #/ (_ begin-decls:expr ...)
       #/w- phase (add1 phase)
       #/expand-cronut-module-begin #/cronut-module-begin-continuation
@@ -199,7 +259,7 @@
             (annotated-decl phase decl))
           decls))]
     [
-      ({~literal #%declare} . args)
+      (#%declare . args)
       
       ; TODO EXPANDER: See if we really want to use the normal
       ; semantics for `#%declare`. Perhaps some segments of a module
@@ -208,11 +268,11 @@
       ;
       (use-normal-semantics)]
     [
-      ({~literal define-syntaxes} . args)
+      (define-syntaxes . args)
       ; TODO EXPANDER
       (error "define-syntaxes: not implemented yet for Cronut")]
     [
-      ({~literal define-values} . args)
+      (define-values . args)
       
       ; TODO EXPANDER: Actually, we won't want to use the normal
       ; semantics for `define-values`. We'll want to keep track of it
@@ -228,7 +288,7 @@
 ;      (error "define-values: not implemented yet for Cronut")
       ]
     [
-      ({~literal module} . args)
+      (module . args)
       
       ; Submodules that don't have access to their enclosing module
       ; don't need to interact with our Cronut module semantics.
@@ -239,7 +299,7 @@
       ;
       (use-normal-semantics)]
     [
-      ({~literal module*} . args)
+      (module* . args)
       (syntax-parse disarmed-expanded-decl
         [
           (_ name #f . args)
@@ -261,7 +321,7 @@
           ;
           (use-normal-semantics)])]
     [
-      ({~literal #%provide} . args)
+      (#%provide . args)
       
       ; TODO EXPANDER: Actually, we won't want to use the normal
       ; semantics for `#%provide`. We'll want to keep track of it for
@@ -273,7 +333,7 @@
 ;      (error "#%provide: not implemented yet for Cronut")
       ]
     [
-      ({~literal #%require} . args)
+      (#%require . args)
       
       ; TODO EXPANDER: Actually, we won't want to use the normal
       ; semantics for `#%require`. We'll want to keep track of it for
@@ -281,7 +341,39 @@
       ; we'll want to replace all the identifiers with ones that have
       ; a scope specific to the immediately compiled variant.
       ;
-      (use-normal-semantics)
+      ; TODO NOW: Well, we might want to go back to
+      ; `(use-normal-semantics)` for now. Right now, we're hardcoding
+      ; the `(#%require ...)` form we (may) want to result from the
+      ; `(require ...)` form in
+      ; sample-module-for-cronut-racket-base.rkt, so this definitely
+      ; isn't implemented in full generality, and at this point it
+      ; isn't even implemented in a way that works for that case in
+      ; particular. One of the roots of the problem, at the moment, is
+      ; our `local-expand` call doesn't make any use of `phase`, so
+      ; it's probably expanding macros according to meanings they have
+      ; at the wrong phase level.
+      ;
+;      (use-normal-semantics)
+      #`
+      (begin
+        (begin-for-meta #,phase
+          (#%require
+            (for-syntax
+              (rename racket/base
+                #,(syntax-local-identifier-as-binding #'#%datum)
+                #%datum))
+            (for-syntax
+              (rename racket/base
+                #,(syntax-local-identifier-as-binding #'define )
+                define )))
+          ; TODO NOW: See if we should rearm `disarmed-expanded-decl`.
+          #;#,disarmed-expanded-decl)
+        
+        ; We trampoline so that the next partial expansion can take
+        ; into account the syntaxes defined by
+        ; `disarmed-expanded-decl`.
+        ;
+        (continue-cronut-module-begin #,cont))
 ;      (error "#%require: not implemented yet for Cronut")
       ]
     [_ (error "Cronut internal error: unexpected local-expand result")]))

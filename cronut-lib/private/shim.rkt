@@ -53,7 +53,8 @@
           bound-id-table-remove bound-id-table-set in-bound-id-table
           make-immutable-bound-id-table)
         (only-in #,(break 'syntax/parse)
-          ...+ ~! ~and expr id ~literal nat ~or syntax-parse)
+          ...+ ~! ~and define-literal-set expr id ~literal nat ~or
+          syntax-parse)
         (only-in #,(break 'syntax/parse/define)
           define-syntax-parse-rule)
         

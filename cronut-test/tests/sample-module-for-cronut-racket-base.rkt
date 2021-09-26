@@ -23,9 +23,15 @@
 ; prefers for there to be a space after `define` here.
 (require (for-syntax (only-in racket/base #%datum define )))
 
+; TODO NOW: Uncomment all this code that's commented out with `#;`
+; once we have things working with the code that's already
+; uncommented.
+;
+#;
 (require (only-in racket/contract/base contract-out))
 
 
+#;
 (provide
   my-value
   (contract-out
@@ -34,11 +40,14 @@
   (for-syntax my-value-for-syntax))
 
 
+#;
 (define my-value 75)
 
+#;
 (example-cronut-declaration
   (define my-value-2 75))
 
+#;
 (example-cronut-declaration
   (define my-value-3 75))
 

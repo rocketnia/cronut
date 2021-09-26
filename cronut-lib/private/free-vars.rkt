@@ -311,7 +311,40 @@
         (fn table
           (w- table (free-vars-table-union table formals #/fn a b b)
             #`(formals #,@(populate table))))))
+    (define-literal-set expr-litset
+      (
+        begin
+        begin0
+        case-lambda
+        if
+        letrec-values
+        let-values
+        #%plain-app
+        #%plain-lambda
+        set!
+        quote
+        quote-syntax
+        #%top
+        #%variable-reference
+        with-continuation-mark))
   #/syntax-parse disarmed-expr
+    
+    ; NOTE: The `#:phase` argument here determines which phase of the
+    ; match subject's lexical information to consult when determining
+    ; a match for a literal. The literal set's literals all use the
+    ; lexical information of the phase this code is in (phase 1 of the
+    ; module you're reading at this moment).
+    ;
+    ; If we used `~literal` instead of literal sets, it might be less
+    ; error-prone if we make a typo, but the documentation for
+    ; `~literal`'s `#:phase` argument suggests it configures *both*
+    ; the phase used by the match subject and the phase used by the
+    ; literal we're comparing it to, so it wouldn't have the correct
+    ; functionality. (TODO: I haven't checked if my reading of that
+    ; documentation is consistent with how it actually works.)
+    ;
+    #:literal-sets ([expr-litset #:phase phase])
+    
     [
       _:id
       (suppliable
@@ -324,15 +357,15 @@
             disarmed-expr)
           disarmed-expr))]
     [
-      ({~literal begin} ~! expr:expr ...+)
+      (begin ~! expr:expr ...+)
       (suppliable-map (process-exprs #'(expr ...)) #/fn exprs
         (rearm #`(begin #,@exprs)))]
     [
-      ({~literal begin0} ~! expr:expr ...+)
+      (begin0 ~! expr:expr ...+)
       (suppliable-map (process-exprs #'(expr ...)) #/fn exprs
         (rearm #`(begin0 #,@exprs)))]
     [
-      ({~literal case-lambda} ~! cases ...)
+      (case-lambda ~! cases ...)
       (suppliable-map
         (suppliable-list-distribute
           (list-map (syntax->list #'(cases ...)) #/fn case
@@ -340,14 +373,12 @@
       #/fn cases
         (rearm #`(case-lambda #,@cases)))]
     [
-      ({~literal if} ~! condition:expr then:expr else:expr)
+      (if ~! condition:expr then:expr else:expr)
       (suppliable-map (process-exprs #'(condition then else))
       #/fn exprs
         (rearm #`(if #,@exprs)))]
     [
-      (
-        {~literal letrec-values} ~! ([(var:id ...) val:expr] ...)
-        body:expr ...+)
+      (letrec-values ~! ([(var:id ...) val:expr] ...) body:expr ...+)
       (suppliable-map
         (suppliable-list-distribute #/list
           (process-formals-and-body
@@ -358,9 +389,7 @@
         (with-syntax ([(_ val ...) vals] [(_ body ...) vars-and-body])
         #/rearm #`(letrec-values ([(var ...) val] ...) body ...)))]
     [
-      (
-        {~literal let-values} ~! ([(var:id ...) val:expr] ...)
-        body:expr ...+)
+      (let-values ~! ([(var:id ...) val:expr] ...) body:expr ...+)
       (suppliable-map
         (suppliable-list-distribute #/list
           (process-exprs #'(val ...))
@@ -369,17 +398,17 @@
         (with-syntax ([(val ...) vals] [(_ body ...) vars-and-body])
         #/rearm #`(let-values ([(var ...) val] ...) body ...)))]
     [
-      ({~literal #%plain-app} ~! func:expr args:expr ...)
+      (#%plain-app ~! func:expr args:expr ...)
       (suppliable-map (process-exprs #'(func args ...))
       #/fn exprs
         (rearm #`(#%plain-app #,@exprs)))]
     [
-      ({~literal #%plain-lambda} . formals-and-body)
+      (#%plain-lambda . formals-and-body)
       (process-formals-and-body #'formals-and-body
       #/fn formals-and-body
         (rearm #`(#%plain-lambda #,@formals-and-body)))]
     [
-      ({~literal set!} ~! var:id val:expr)
+      (set! ~! var:id val:expr)
       (suppliable-map
         (suppliable-list-distribute #/list
           (suppliable
@@ -393,12 +422,10 @@
       #/dissectfn (list make-set val)
         (rearm #/make-set val #/fn val #`(set! var #,val)))]
     [
-      ({~literal quote} ~! datum)
+      (quote ~! datum)
       (suppliable-done phase expr-stx)]
     [
-      (
-        {~literal quote-syntax} ~! datum
-        . {~and maybe-local {~or () (#:local)}})
+      (quote-syntax ~! datum . {~and maybe-local {~or () (#:local)}})
       (suppliable
         (free-vars-table-update-quotes (make-free-vars-table phase)
         #/fn quotes
@@ -409,7 +436,7 @@
         #/rearm #/make-quote-syntax #'datum #/fn datum
           #`(quote-syntax #,datum . maybe-local)))]
     [
-      ({~literal #%top} ~! . var:id)
+      (#%top ~! . var:id)
       (suppliable
         (free-vars-table-update-tops
           (make-free-vars-table phase)
@@ -420,8 +447,10 @@
           (bound-id-table-ref (free-vars-table-tops table) #'var)
         #/rearm #/make-top disarmed-expr))]
     [
-      ({~literal #%variable-reference} . args)
+      (#%variable-reference . args)
+      (define-literal-set varref-litset (#%top))
       (syntax-parse #'args
+        #:literal-sets ([varref-litset #:phase phase])
         [
           ()
           (suppliable
@@ -446,7 +475,7 @@
                 #'var)
             #/rearm #/make-varref disarmed-expr))]
         [
-          (({~literal #%top} . var:id))
+          ((#%top . var:id))
           (suppliable
             (free-vars-table-update-topvarrefs
               (make-free-vars-table phase)
@@ -458,9 +487,7 @@
                 #'var)
             #/rearm #/make-topvarref disarmed-expr))])]
     [
-      (
-        {~literal with-continuation-mark} ~! key:expr val:expr
-        result:expr)
+      (with-continuation-mark ~! key:expr val:expr result:expr)
       (suppliable-map (process-exprs #'(key val result)) #/fn exprs
         (rearm #`(with-continuation-mark #,@exprs)))]
     [_ (error "Cronut internal error: unexpected fully expanded expression")]))
