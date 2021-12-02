@@ -26,6 +26,8 @@
 (require (only-in racket/contract/base contract-out))
 
 
+; TODO PARTIAL EXPANSION: Uncomment this file once we get it working.
+#|
 (provide
   my-value
   (contract-out
@@ -44,3 +46,4 @@
 
 (begin-for-syntax
   (define my-value-for-syntax 75))
+|#
