@@ -27,9 +27,10 @@ jobs:
       # docs yet; we'll do that later when we're recompiling the
       # project to check its dependencies.
       #
-      # The order in which we install these packages matters; if we install a
-      # package before one it depends on, the command will fetch a stale copy of
-      # the dependency from the Racket package index.
+      # The order in which we install these packages matters; if we
+      # install a package before one it depends on, the command will
+      # fetch a stale copy of the dependency from the Racket package
+      # index.
       #
       - name: Install `${{ matrix.package }}-lib` and its dependencies
         run: raco pkg install --auto --no-docs --batch --link "./${{ matrix.package }}-lib/"
