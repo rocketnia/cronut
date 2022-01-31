@@ -71,6 +71,12 @@
 
 (begin-for-syntax #/struct cronut-module-begin-continuation (decls))
 
+(define-for-syntax (syntax-local-introduce-to-cronut-module-begin-continuation cont)
+  (dissect cont (cronut-module-begin-continuation decls)
+  #/cronut-module-begin-continuation #/for/list ([decl (in-list decls)])
+    (dissect decl (annotated-decl phase decl-syntax)
+    #/annotated-decl phase #/syntax-local-introduce decl-syntax)))
+
 
 (begin-for-syntax #/define-generics cronut-declaration-macro
   (cronut-declaration-macro-call
@@ -123,7 +129,10 @@
         (begin-for-meta #,phase #,decl)
         ; We trampoline so that the next partial expansion can take
         ; into account the syntaxes defined by `decl`.
-        (continue-cronut-module-begin #,cont)))
+        (continue-cronut-module-begin
+          #,
+          (syntax-local-introduce-to-cronut-module-begin-continuation
+            cont))))
   #/syntax-parse disarmed-expanded-decl
     [
       ({~literal #%cronut-declaration} . args)
@@ -296,7 +305,12 @@
       (cronut-module-begin-continuation
         (for/list ([decl (in-list (syntax->list #'(decl ...)))])
           (annotated-decl 0 decl)))
-      #`(#%module-begin (continue-cronut-module-begin #,cont)))))
+      #`
+      (#%module-begin
+        (continue-cronut-module-begin
+          #,
+          (syntax-local-introduce-to-cronut-module-begin-continuation
+            cont))))))
 
 (define-syntax -#%module-begin (module-begin-representation))
 
@@ -310,7 +324,9 @@
     #/w- cont (syntax-e #'cont)
     #/expect (cronut-module-begin-continuation? cont) #t
       (error "expected cont to be a Cronut #%module-begin continuation")
-    #/expand-cronut-module-begin cont)))
+    #/expand-cronut-module-begin
+      (syntax-local-introduce-to-cronut-module-begin-continuation
+        cont))))
 
 (define-syntax continue-cronut-module-begin
   (continue-cronut-module-begin-representation))
@@ -333,7 +349,10 @@
           (begin-for-meta #,phase decl)
           ; We trampoline so that the next partial expansion can take
           ; into account the syntaxes defined by `decl`.
-          (continue-cronut-module-begin #,cont))))])
+          (continue-cronut-module-begin
+            #,
+            (syntax-local-introduce-to-cronut-module-begin-continuation
+              cont)))))])
 
 (define-syntax example-cronut-declaration
   (example-cronut-declaration-representation))
