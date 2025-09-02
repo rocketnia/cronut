@@ -5,7 +5,7 @@
 ; A utility for traversing a fully expanded Racket expression and
 ; replacing its free variable uses.
 
-;   Copyright 2021 The Cronut Authors
+;   Copyright 2021, 2025 The Cronut Authors
 ;
 ;   Licensed under the Apache License, Version 2.0 (the "License");
 ;   you may not use this file except in compliance with the License.
@@ -396,9 +396,8 @@
       ({~literal quote} ~! datum)
       (suppliable-done phase expr-stx)]
     [
-      (
-        {~literal quote-syntax} ~! datum
-        . {~and maybe-local {~or () (#:local)}})
+      ( {~literal quote-syntax} ~! datum
+        . {~and maybe-local {~or* () (#:local)}})
       (suppliable
         (free-vars-table-update-quotes (make-free-vars-table phase)
         #/fn quotes

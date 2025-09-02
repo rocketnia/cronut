@@ -5,7 +5,7 @@
 ; Miscellaneous implementation details of Cronut for the purpose of
 ; importing Cronut definitions from Racket modules.
 
-;   Copyright 2021 The Cronut Authors
+;   Copyright 2021, 2025 The Cronut Authors
 ;
 ;   Licensed under the Apache License, Version 2.0 (the "License");
 ;   you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@
 
 
 
-(define-syntax-parse-rule
+(define-syntax-parse-rule/autoptic
   (import-cronut-single-argument-function
     spine-expr:expr from-id-expr:expr var:id)
   
@@ -47,7 +47,7 @@
     (define-for-syntax definer-spine spine-expr)
     (define-for-syntax from-id from-id-expr)
     
-    (define-syntax-parse-rule (require-definer definer:id)
+    (define-syntax-parse-rule/autoptic (require-definer definer:id)
       
       #:with module-path
       (expect (simplify-module-spine definer-spine) (just spine)
@@ -63,7 +63,7 @@
     
     (define-syntax (require-definer-host stx)
       (syntax-protect
-      #/syntax-parse stx #/ (require-definer-host definer-host:id)
+      #/syntax-parse stx #/ {~autoptic-list (_ definer-host:id)}
       #/dissect definer (module-contents-for-lexical-unit _ bundle)
       #/mat bundle (here-bundle _ _)
         #'(define-for-syntax definer-host definer)
@@ -98,7 +98,7 @@
           x body)
       #/syntax-local-eval #`(lambda (#,x) #,body)))
     
-    (define-syntax-parse-rule (var x:expr)
+    (define-syntax-parse-rule/autoptic (var x:expr)
       #:with result (transform-import #'x)
       result)
     
@@ -106,7 +106,7 @@
 
 
 
-(define-syntax-parse-rule
+(define-syntax-parse-rule/autoptic
   (define-lexical-unit-compile-time
     lexical-unit-compile-time:id
     own-spine-expr:expr
@@ -123,31 +123,27 @@
       known-spines
       own-declared-lexical-unit)))
 
-(define-syntax (define-lexical-unit-compile-time-step-2 stx)
-  (syntax-protect
-  #/syntax-parse stx #/
-    (_
-      lexical-unit-compile-time:id
-      own-spine-expr:expr
-      known-spines-expr:expr
-      own-declared-lexical-unit-expr:expr)
-  #/if
+(define-syntax-parse-rule/autoptic
+  (define-lexical-unit-compile-time-step-2
+    lexical-unit-compile-time:id
+    own-spine-expr:expr
+    known-spines-expr:expr
+    own-declared-lexical-unit-expr:expr)
+  
+  #:with define-lexical-unit-compile-time-step-3
+  (if
     (equal-always? (syntax-local-eval #'own-spine-expr)
       (car #/syntax-local-eval #'known-spines-expr))
-    #'
-    (define-lexical-unit-compile-time-step-3-as-host
-      lexical-unit-compile-time
-      own-spine-expr
-      known-spines-expr
-      own-declared-lexical-unit-expr)
-    #'
-    (define-lexical-unit-compile-time-step-3-as-guest
-      lexical-unit-compile-time
-      own-spine-expr
-      known-spines-expr
-      own-declared-lexical-unit-expr)))
+    #'define-lexical-unit-compile-time-step-3-as-host
+    #'define-lexical-unit-compile-time-step-3-as-guest)
+  
+  (define-lexical-unit-compile-time-step-3
+    lexical-unit-compile-time
+    own-spine-expr
+    known-spines-expr
+    own-declared-lexical-unit-expr))
 
-(define-syntax-parse-rule
+(define-syntax-parse-rule/autoptic
   (define-lexical-unit-compile-time-step-3-as-guest
     lexical-unit-compile-time:id
     own-spine-expr:expr
@@ -160,7 +156,7 @@
         (just-value #/simplify-module-spine #/car known-spines-expr)
         own-declared-lexical-unit-expr))))
 
-(define-syntax-parse-rule
+(define-syntax-parse-rule/autoptic
   (define-lexical-unit-compile-time-step-3-as-host
     lexical-unit-compile-time:id
     own-spine-expr:expr
@@ -215,7 +211,7 @@
     (begin-for-syntax #/match-define (list known-spine ...)
       known-spines-expr)
     
-    (define-syntax-parse-rule
+    (define-syntax-parse-rule/autoptic
       (require-definer definer:id definer-spine:expr)
       
       #:with module-path
@@ -285,14 +281,15 @@
               #,build-run-time-declaration))
           (append known-imports known-locals)))
       
-      (define-syntax-parse-rule
+      (define-syntax-parse-rule/autoptic
         (known-run-compiled-expr compiled:id)
         #:with result (syntax-local-introduce known-compiled-expr)
         (define-for-syntax compiled result))
       
       (known-run-compiled-expr known-compiled)
       
-      (define-syntax-parse-rule (known-run-run-time-declaration)
+      (define-syntax-parse-rule/autoptic
+        (known-run-run-time-declaration)
         
         #:with result
         (syntax-local-introduce known-run-time-declaration)
@@ -303,7 +300,7 @@
     
     ; TODO: This shares some implementation details with
     ; `import-cronut-single-argument-function`. Factor these out.
-    (define-syntax-parse-rule
+    (define-syntax-parse-rule/autoptic
       (resolve-single-argument-function
         var:id compiled-expr:expr from-id-expr:expr)
       (begin
@@ -322,7 +319,7 @@
               x body)
           #/syntax-local-eval #`(lambda (#,x) #,body)))
         
-        (define-syntax-parse-rule (var x:expr)
+        (define-syntax-parse-rule/autoptic (var x:expr)
           #:with result (transform-import #'x)
           result)))
     
@@ -333,7 +330,8 @@
     
     (... #/define-syntax (resolve-imports stx)
       (syntax-protect
-      #/syntax-parse stx #/ (_ to-ids:expr declaration:expr)
+      #/syntax-parse stx #/
+        {~autoptic-list (_ to-ids:expr declaration:expr)}
       #/w- to-ids (syntax-local-eval #'to-ids)
       #/dissect (syntax-local-eval #'declaration)
         (cronut-declaration _ imports _ _ _)

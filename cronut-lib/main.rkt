@@ -5,7 +5,7 @@
 ; A Racket library with entrypoints to the Cronut programming
 ; language.
 
-;   Copyright 2021 The Cronut Authors
+;   Copyright 2021, 2025 The Cronut Authors
 ;
 ;   Licensed under the Apache License, Version 2.0 (the "License");
 ;   you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@
 
 (require (for-syntax (only-in syntax/parse expr)))
 
-(require (only-in syntax/parse/define define-syntax-parse-rule))
+(require (only-in lathe-comforts define-syntax-parse-rule/autoptic))
 
 
 ; TODO: Implement `define-cronut-module-here` in a way that isn't just
@@ -30,7 +30,8 @@
 (provide define-cronut-module-here)
 
 
-(define-syntax-parse-rule (define-cronut-module-here decl:expr ...)
+(define-syntax-parse-rule/autoptic
+  (define-cronut-module-here decl:expr ...)
   (begin
     (define hello (begin (#%datum . decl) ...))
     (provide hello)))

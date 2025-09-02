@@ -8,7 +8,7 @@
 ; the ability to make Cronut declarations for things like cyclic
 ; module dependencies.
 
-;   Copyright 2021 The Cronut Authors
+;   Copyright 2021, 2022, 2025 The Cronut Authors
 ;
 ;   Licensed under the Apache License, Version 2.0 (the "License");
 ;   you may not use this file except in compliance with the License.
@@ -56,15 +56,16 @@
 
 
 
-(define-syntax (begin-for-meta stx)
-  (syntax-protect
-  #/syntax-parse stx #/ (_ phase:nat step:expr ...)
-  #/w- steps
-    (for/fold
-      ([steps #'(step ...)])
-      ([i (in-range (syntax-e #'phase))])
-      #`((begin-for-syntax #,@steps)))
-    #`(begin #,@steps)))
+(define-syntax-parse-rule/autoptic
+  (begin-for-meta {~autoptic phase:nat} step:expr ...)
+  
+  #:with (steps ...)
+  (for/fold
+    ([steps #'(step ...)])
+    ([i (in-range (syntax-e #'phase))])
+    #`((begin-for-syntax #,@steps)))
+  
+  (begin steps ...))
 
 
 (begin-for-syntax #/struct annotated-decl (phase decl-stx))
@@ -134,10 +135,9 @@
           (syntax-local-introduce-to-cronut-module-begin-continuation
             cont))))
   #/syntax-parse disarmed-expanded-decl
-    [
-      ({~literal #%cronut-declaration} . args)
+    [ ({~literal #%cronut-declaration} . args)
       (syntax-parse disarmed-expanded-decl #/
-        (_ {~and call (op . args)})
+        {~autoptic-list (_ {~and call (op:id . args)})}
       ; TODO: See if we should add a `disappeared-use` syntax
       ; property here.
       #/w- op (syntax-local-value #'op)
@@ -147,7 +147,7 @@
     [
       ; NOTE: This matches anything that's an expression.
       (
-        {~or
+        {~or*
           
           ; Expression syntaxes that are part of both the
           ; `local-expand` default stop list and the syntax of
@@ -188,8 +188,7 @@
       (use-normal-semantics)
 ;      (error "expression at the module level: not implemented yet for Cronut")
       ]
-    [
-      ({~literal begin} . args)
+    [ ({~literal begin} . args)
       (syntax-parse disarmed-expanded-decl #/ (_ begin-decls:expr ...)
       #/expand-cronut-module-begin #/cronut-module-begin-continuation
         (append
@@ -197,8 +196,7 @@
             ([decl (in-list (syntax->list #'(begin-decls ...)))])
             (annotated-decl phase decl))
           decls))]
-    [
-      ({~literal begin-for-syntax} . args)
+    [ ({~literal begin-for-syntax} . args)
       (syntax-parse disarmed-expanded-decl #/ (_ begin-decls:expr ...)
       #/w- phase (add1 phase)
       #/expand-cronut-module-begin #/cronut-module-begin-continuation
@@ -207,8 +205,7 @@
             ([decl (in-list (syntax->list #'(begin-decls ...)))])
             (annotated-decl phase decl))
           decls))]
-    [
-      ({~literal #%declare} . args)
+    [ ({~literal #%declare} . args)
       
       ; TODO EXPANDER: See if we really want to use the normal
       ; semantics for `#%declare`. Perhaps some segments of a module
@@ -216,12 +213,10 @@
       ; `module->namespace` lexical information.
       ;
       (use-normal-semantics)]
-    [
-      ({~literal define-syntaxes} . args)
+    [ ({~literal define-syntaxes} . args)
       ; TODO EXPANDER
       (error "define-syntaxes: not implemented yet for Cronut")]
-    [
-      ({~literal define-values} . args)
+    [ ({~literal define-values} . args)
       
       ; TODO EXPANDER: Actually, we won't want to use the normal
       ; semantics for `define-values`. We'll want to keep track of it
@@ -236,8 +231,7 @@
       (use-normal-semantics)
 ;      (error "define-values: not implemented yet for Cronut")
       ]
-    [
-      ({~literal module} . args)
+    [ ({~literal module} . args)
       
       ; Submodules that don't have access to their enclosing module
       ; don't need to interact with our Cronut module semantics.
@@ -247,8 +241,7 @@
       ; the enclosing module?
       ;
       (use-normal-semantics)]
-    [
-      ({~literal module*} . args)
+    [ ({~literal module*} . args)
       (syntax-parse disarmed-expanded-decl
         [
           (_ name #f . args)
@@ -269,8 +262,7 @@
           ; variants of the enclosing module?
           ;
           (use-normal-semantics)])]
-    [
-      ({~literal #%provide} . args)
+    [ ({~literal #%provide} . args)
       
       ; TODO EXPANDER: Actually, we won't want to use the normal
       ; semantics for `#%provide`. We'll want to keep track of it for
@@ -281,8 +273,7 @@
       (use-normal-semantics)
 ;      (error "#%provide: not implemented yet for Cronut")
       ]
-    [
-      ({~literal #%require} . args)
+    [ ({~literal #%require} . args)
       
       ; TODO EXPANDER: Actually, we won't want to use the normal
       ; semantics for `#%require`. We'll want to keep track of it for
@@ -320,7 +311,7 @@
   #:property prop:procedure
   (fn self stx
     (syntax-protect
-    #/syntax-parse stx #/ (_ cont)
+    #/syntax-parse stx #/ {~autoptic-list (_ cont)}
     #/w- cont (syntax-e #'cont)
     #/expect (cronut-module-begin-continuation? cont) #t
       (error "expected cont to be a Cronut #%module-begin continuation")
@@ -343,7 +334,7 @@
   [
     (define (cronut-declaration-macro-call self phase stx cont)
       (syntax-protect
-      #/syntax-parse stx #/ (_ decl:expr)
+      #/syntax-parse stx #/ {~autoptic-list (_ decl:expr)}
         #`
         (begin
           (begin-for-meta #,phase decl)

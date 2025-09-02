@@ -25,6 +25,7 @@
 (require #/for-syntax #/only-in syntax/parse syntax-parse)
 
 (require #/for-syntax #/only-in lathe-comforts fn w-)
+(require #/for-syntax #/only-in lathe-comforts/syntax ~autoptic-list)
 
 
 (provide
@@ -33,9 +34,12 @@
 
 (define-syntax (shim-require-various stx)
   (syntax-protect
-  #/syntax-parse stx #/ (_)
+  #/syntax-parse stx #/ {~autoptic-list (_)}
   #/w- break (fn id #/datum->syntax stx id)
     #`(require
+        
+        (for-syntax #/only-in #,(break 'lathe-comforts/syntax)
+          ~autoptic ~autoptic-list)
         
         (only-in #,(break 'racket/contract/base)
           -> and/c any/c contract-name hash/c list/c listof none/c
@@ -53,12 +57,10 @@
           bound-id-table-remove bound-id-table-set in-bound-id-table
           make-immutable-bound-id-table)
         (only-in #,(break 'syntax/parse)
-          ...+ ~! ~and expr id ~literal nat ~or syntax-parse)
-        (only-in #,(break 'syntax/parse/define)
-          define-syntax-parse-rule)
+          ...+ ~! ~and ~literal ~or* expr id nat syntax-parse)
         
         (only-in #,(break 'lathe-comforts)
-          dissect dissectfn expect fn mat w- w-loop)
+          define-syntax-parse-rule/autoptic dissect dissectfn expect fn mat w- w-loop)
         (only-in #,(break 'lathe-comforts/hash) hash-kv-map)
         (only-in #,(break 'lathe-comforts/list) list-foldl list-map)
         (only-in #,(break 'lathe-comforts/maybe)
