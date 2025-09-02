@@ -33,7 +33,7 @@
 (define (make-free-vars-table phase)
   (free-vars-table
     phase
-    (hash
+    (hashalw
       'quotes (nothing)
       'anonvarrefs (nothing)
       
@@ -46,7 +46,7 @@
       ; be able to compute this statically in Cronut.
       
       )
-    (hash
+    (hashalw
       'gets (make-immutable-bound-id-table phase)
       'sets (make-immutable-bound-id-table phase)
       'tops (make-immutable-bound-id-table phase)
@@ -203,7 +203,7 @@
 (define (free-vars-table-union a b elems-merge)
   (dissect a (free-vars-table a-phase a-maybes a-tables)
   #/dissect b (free-vars-table b-phase b-maybes b-tables)
-  #/dissect (equal? a-phase b-phase) #t
+  #/dissect (equal-always? a-phase b-phase) #t
   #/free-vars-table a-phase
     (hash-union a-maybes b-maybes #/fn a-maybe b-maybe
       (maybe-union a-maybe b-maybe elems-merge))
@@ -213,14 +213,14 @@
 (define (free-vars-table-minus a b)
   (dissect a (free-vars-table a-phase a-maybes a-tables)
   #/dissect b (free-vars-table b-phase b-maybes b-tables)
-  #/dissect (equal? a-phase b-phase) #t
+  #/dissect (equal-always? a-phase b-phase) #t
   #/free-vars-table a-phase
-    (for/hash ([(k a-maybe) (in-hash a-maybes)])
-      (define b-maybe (hash-ref b-maybes k))
-      (maybe-minus a-maybe b-maybe))
-    (for/hash ([(k a-table) (in-hash a-tables)])
-      (define b-table (hash-ref b-tables k))
-      (bound-id-table-minus a-table b-table))))
+    (hash-kv-map a-maybes #/fn k a-maybe
+      (w- b-maybe (hash-ref b-maybes k)
+      #/maybe-minus a-maybe b-maybe))
+    (hash-kv-map a-tables #/fn k a-table
+      (w- b-table (hash-ref b-tables k)
+      #/bound-id-table-minus a-table b-table))))
 
 (struct suppliable (free-vars-set populate))
 

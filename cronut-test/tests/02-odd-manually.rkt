@@ -57,7 +57,7 @@
         (list #'is-odd?)
         #'#`
         (compiled-lexical-unit
-          (hash 'is-odd?
+          (hashalw 'is-odd?
             (compiled-lexical-unit-entry-for-single-argument-function
               #'x
               #'#`(#,#'#,is-odd? #,x))))

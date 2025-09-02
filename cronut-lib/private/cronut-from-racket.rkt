@@ -132,7 +132,7 @@
       known-spines-expr:expr
       own-declared-lexical-unit-expr:expr)
   #/if
-    (equal? (syntax-local-eval #'own-spine-expr)
+    (equal-always? (syntax-local-eval #'own-spine-expr)
       (car #/syntax-local-eval #'known-spines-expr))
     #'
     (define-lexical-unit-compile-time-step-3-as-host

@@ -57,7 +57,7 @@
         (list #'is-even?)
         #'#`
         (compiled-lexical-unit
-          (hash 'is-even?
+          (hashalw 'is-even?
             (compiled-lexical-unit-entry-for-single-argument-function
               #'x
               #'#`(#,#'#,is-even? #,x))))

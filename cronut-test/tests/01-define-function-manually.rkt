@@ -52,7 +52,7 @@
         (list #'add-two)
         #'#`
         (compiled-lexical-unit
-          (hash 'add-two
+          (hashalw 'add-two
             (compiled-lexical-unit-entry-for-single-argument-function
               #'x
               #'#`(#,#'#,add-two #,x))))
